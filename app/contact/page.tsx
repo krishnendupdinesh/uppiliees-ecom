@@ -629,16 +629,16 @@ export default function ContactPage() {
         )}
 
         <div className="mx-auto max-w-[680px]">
-          <p className="text-[13px] font-semibold tracking-[0.18em] text-[#C7E900]">
+          <p className="text-sm font-bold tracking-[0.18em] text-[#C7E900]">
             {PAGE_TEXT.eyebrow}
           </p>
           <h1
             id="contact-heading"
-            className="mt-3 text-[30px] font-bold leading-tight tracking-tight text-white md:text-[40px] lg:text-[52px]"
+            className="mt-3 text-[32px] font-bold leading-tight tracking-tight text-white md:text-[42px] lg:text-[54px]"
           >
             {PAGE_TEXT.heading}
           </h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-white/85 md:text-base lg:mt-4 lg:text-[18px]">
+          <p className="mt-3 text-base font-normal leading-relaxed text-white/90 md:text-[17px] lg:mt-4 lg:text-[19px]">
             {PAGE_TEXT.subheading}
           </p>
         </div>
@@ -660,10 +660,10 @@ export default function ContactPage() {
           {/* Form (first on mobile, right on laptop) */}
           <Reveal className="lg:order-2 lg:h-full">
             <div className="rounded-xl border-2 border-[#07552F]/40 bg-white p-5 md:p-8 lg:h-full lg:rounded-none lg:border-0 lg:p-12">
-              <h2 className="text-[22px] font-bold leading-snug text-[#07552F] md:text-[26px] lg:text-[30px]">
+              <h2 className="text-[24px] font-bold leading-snug text-[#07552F] md:text-[28px] lg:text-[32px]">
                 {PAGE_TEXT.formHeading}
               </h2>
-              <p className="mt-1.5 hidden text-[15px] leading-relaxed text-[#68786B] lg:block">
+              <p className="mt-1.5 hidden text-base font-normal leading-relaxed text-[#68786B] lg:block">
                 Fill in the form below and we&apos;ll reply to your message.
               </p>
               <div className="relative mt-5 md:mt-6">
@@ -682,10 +682,10 @@ export default function ContactPage() {
               className="pointer-events-none absolute -bottom-24 -right-24 hidden size-[280px] rounded-full border-[40px] border-white/5 lg:block"
             />
 
-            <p className="hidden text-[13px] font-semibold tracking-[0.18em] text-[#C7E900] lg:block">
+            <p className="hidden text-sm font-bold tracking-[0.18em] text-[#C7E900] lg:block">
               PURE NATURE. PURE GOODNESS.
             </p>
-            <h2 className="text-[22px] font-bold leading-snug text-[#07552F] md:text-[26px] lg:mt-3 lg:text-[30px] lg:text-white">
+            <h2 className="text-[24px] font-bold leading-snug text-[#07552F] md:text-[28px] lg:mt-3 lg:text-[32px] lg:text-white">
               {PAGE_TEXT.infoHeading}
             </h2>
 
@@ -728,10 +728,10 @@ export default function ContactPage() {
       {/* ── Closing band (laptop only) ── */}
       <section className="hidden bg-[#F4F8F1] px-[3.3vw] py-[64px] text-center lg:block">
         <div className="mx-auto max-w-[640px]">
-          <h2 className="text-[32px] font-bold leading-tight tracking-tight text-[#07552F]">
+          <h2 className="text-[34px] font-bold leading-tight tracking-tight text-[#07552F]">
             Explore Our Collections
           </h2>
-          <p className="mt-3 text-[17px] leading-relaxed text-[#68786B]">
+          <p className="mt-3 text-[18px] font-normal leading-relaxed text-[#68786B]">
             Discover everyday essentials for your skincare and haircare routine.
           </p>
           <Link

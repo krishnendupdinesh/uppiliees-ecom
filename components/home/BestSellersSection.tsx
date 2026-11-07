@@ -163,8 +163,8 @@ function ProductCard({
       </Link>
 
       {/* Details */}
-      <div className="flex flex-1 flex-col p-3.5 md:p-5">
-        <h3 className="text-[16px] font-bold leading-snug text-[#07552F] md:text-lg">
+      <div className="flex flex-1 flex-col p-4 md:p-5">
+        <h3 className="text-[17px] font-bold leading-snug text-[#07552F] md:text-[19px]">
           <Link
             href={product.href}
             className="transition-colors duration-200 hover:text-[#4D9A18] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#07552F]"
@@ -173,16 +173,16 @@ function ProductCard({
           </Link>
         </h3>
 
-        <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-[#68786B] md:text-[15px]">
+        <p className="mt-1.5 line-clamp-2 text-[15px] font-normal leading-relaxed text-[#68786B] md:text-base">
           {product.description}
         </p>
 
         <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-lg font-bold text-[#173D2A] md:text-xl">
+          <span className="text-xl font-bold text-[#173D2A] md:text-[22px]">
             {formatPrice(product.price)}
           </span>
           {hasDiscount && (
-            <span className="text-sm text-[#68786B] line-through">
+            <span className="text-[15px] font-normal text-[#68786B] line-through">
               {formatPrice(product.originalPrice as number)}
             </span>
           )}
@@ -242,14 +242,14 @@ export default function BestSellersSection({
       className="overflow-x-hidden bg-white px-4 py-[52px] md:px-[3.3vw] md:py-[64px] lg:py-[90px]"
     >
       <div className="mx-auto max-w-[1280px]">
-        <div className="mx-auto max-w-[640px] text-center">
+        <div className="mx-auto max-w-[680px] text-center">
           <h2
             id="bestsellers-heading"
-            className="text-[28px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[42px]"
+            className="text-[30px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[44px]"
           >
             {SECTION_TEXT.heading}
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-[#68786B] md:text-base lg:text-[17px]">
+          <p className="mt-3 text-base font-normal leading-relaxed text-[#68786B] md:text-[17px] lg:text-[18px]">
             {SECTION_TEXT.subheading}
           </p>
         </div>

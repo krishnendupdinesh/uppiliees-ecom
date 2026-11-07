@@ -75,18 +75,18 @@ export default function SearchDropdown({
           >
             <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-[#E6EFE3]">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-[#063D27]">
+                <span className="text-xs font-medium uppercase tracking-wider text-[#063D27]">
                   Matching Products ({filteredProducts.length})
                 </span>
                 <Sparkles className="w-3 h-3 text-[#C7E900]" />
               </div>
-              <span className="text-[11px] text-[#8BA894] font-medium hidden sm:inline">
+              <span className="text-[11px] text-[#8BA894] font-normal hidden sm:inline">
                 Pure Nature. Pure Goodness.
               </span>
             </div>
 
             {filteredProducts.length === 0 ? (
-              <div className="py-6 text-center text-xs sm:text-sm text-[#8BA894]">
+              <div className="py-6 text-center text-xs sm:text-sm font-normal text-[#8BA894]">
                 No Kerala products found matching &ldquo;{searchQuery}&rdquo;.
               </div>
             ) : (
@@ -105,7 +105,7 @@ export default function SearchDropdown({
                         <p className="text-xs sm:text-sm md:text-[15px] font-bold text-[#063D27] group-hover:text-[#4D9A18] transition-colors m-0 leading-snug truncate">
                           {product.name}
                         </p>
-                        <span className="text-[10px] sm:text-xs font-semibold text-[#8BA894] uppercase tracking-wide">
+                        <span className="text-[10px] sm:text-xs font-medium text-[#8BA894] uppercase tracking-wide">
                           {product.category}
                         </span>
                       </div>

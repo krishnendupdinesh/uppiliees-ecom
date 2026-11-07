@@ -62,32 +62,32 @@ export default async function ProductPage({ params }: { params: Params }) {
           </div>
 
           <div>
-            <p className="text-sm text-[#4D9A18] font-medium">{product.category}</p>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#063D27] mt-1">{product.name}</h1>
+            <p className="text-base text-[#4D9A18] font-semibold">{product.category}</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#063D27] mt-1">{product.name}</h1>
 
             <div className="flex items-baseline flex-wrap gap-x-3 mt-4">
-              <span className="text-3xl font-semibold text-[#063D27]">{formatPrice(product.price)}</span>
-              <span className="text-gray-400 line-through">{formatPrice(product.mrp)}</span>
+              <span className="text-3xl sm:text-4xl font-bold text-[#063D27]">{formatPrice(product.price)}</span>
+              <span className="text-base text-gray-400 font-normal line-through">{formatPrice(product.mrp)}</span>
             </div>
             {discount > 0 && (
-              <p className="text-sm text-[#4D9A18] mt-1">You save {formatPrice(product.mrp - product.price)}</p>
+              <p className="text-base font-semibold text-[#4D9A18] mt-1">You save {formatPrice(product.mrp - product.price)}</p>
             )}
-            <p className="text-xs text-gray-500 mt-1">Inclusive of all taxes</p>
+            <p className="text-sm font-normal text-gray-500 mt-1">Inclusive of all taxes</p>
 
-            {product.description && <p className="text-gray-600 mt-6 leading-relaxed">{product.description}</p>}
+            {product.description && <p className="text-base text-gray-700 font-normal mt-6 leading-relaxed">{product.description}</p>}
 
             <div className="mt-6">
               <ProductActions />
             </div>
 
-            <dl className="mt-8 border-t border-gray-200 text-sm">
+            <dl className="mt-8 border-t border-gray-200 text-base">
               <div className="flex justify-between py-3 border-b border-gray-200">
-                <dt className="text-gray-500">Collection</dt>
-                <dd className="font-medium">{collection.title}</dd>
+                <dt className="text-gray-500 font-normal">Collection</dt>
+                <dd className="font-semibold">{collection.title}</dd>
               </div>
               <div className="flex justify-between py-3 border-b border-gray-200">
-                <dt className="text-gray-500">Category</dt>
-                <dd className="font-medium">{product.category}</dd>
+                <dt className="text-gray-500 font-normal">Category</dt>
+                <dd className="font-semibold">{product.category}</dd>
               </div>
             </dl>
           </div>
@@ -96,7 +96,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         {/* Other products */}
         {related.length > 0 && (
           <section className="mt-14">
-            <h2 className="text-xl font-bold text-[#063D27] mb-4">You may also like</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#063D27] mb-5">You may also like</h2>
             <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {related.map((item) => (
                 <ProductCard key={item.id} product={item} href={productHref(collection, item)} />

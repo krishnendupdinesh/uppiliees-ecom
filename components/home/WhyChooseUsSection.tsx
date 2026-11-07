@@ -165,10 +165,10 @@ function BenefitItem({ item, delay }: { item: BenefitData; delay: number }) {
         <Icon name={item.icon} />
       </div>
 
-      <h3 className="mt-3.5 text-base font-bold leading-snug text-[#07552F] md:mt-4 md:text-lg lg:mt-5 lg:text-xl">
+      <h3 className="mt-3.5 text-[17px] font-bold leading-snug text-[#07552F] md:mt-4 md:text-[19px] lg:mt-5 lg:text-[21px]">
         {item.title}
       </h3>
-      <p className="mt-1.5 max-w-[260px] text-[13px] leading-relaxed text-[#68786B] md:mt-2 md:text-[15px] lg:text-base">
+      <p className="mt-1.5 max-w-[270px] text-sm font-normal leading-relaxed text-[#68786B] md:mt-2 md:text-base lg:text-[17px]">
         {item.description}
       </p>
     </div>
@@ -208,10 +208,10 @@ export default function WhyChooseUsSection() {
       className="bg-[#F4F8F1] px-4 py-10 md:px-[3.3vw] md:py-[56px] lg:py-[80px]"
     >
       <div className="mx-auto max-w-[1280px]">
-        <div className="mx-auto max-w-[640px] text-center">
+        <div className="mx-auto max-w-[680px] text-center">
           <h2
             id="why-choose-heading"
-            className="text-[26px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[42px]"
+            className="text-[28px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[44px]"
           >
             {SECTION_TEXT.heading}
           </h2>

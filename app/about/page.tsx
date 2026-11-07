@@ -8,7 +8,7 @@ import { Montserrat } from "next/font/google";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
-  weight: ["400", "500", "700", "800"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata = {
@@ -186,15 +186,15 @@ export default function AboutPage() {
 const css = `
 .about{
   --deep:#063D27; --forest:#07552F; --leaf:#4D9A18; --lime:#C7E900; --soft:#F4F8F1;
-  background:#fff; color:#1d2b24; line-height:1.7; font-size:1rem;
+  background:#fff; color:#1d2b24; line-height:1.75; font-size:1.0625rem;
 }
 .about *{box-sizing:border-box}
 .about .wrap{max-width:1080px; margin:0 auto; padding:0 1.25rem}
-.about h1,.about h2,.about h3{color:var(--deep); line-height:1.15; margin:0}
-.about h1{font-size:clamp(2.4rem,7vw,4.5rem); font-weight:800; letter-spacing:-0.02em}
-.about h2{font-size:clamp(1.6rem,4vw,2.25rem); font-weight:700; margin-bottom:1rem}
-.about h3{font-size:1.2rem; font-weight:700; margin-bottom:.4rem}
-.about p{margin:0 0 1rem; max-width:62ch}
+.about h1,.about h2,.about h3{color:var(--deep); line-height:1.15; margin:0; font-weight:700}
+.about h1{font-size:clamp(2.5rem,7vw,4.5rem); font-weight:700; letter-spacing:-0.02em}
+.about h2{font-size:clamp(1.75rem,4vw,2.4rem); font-weight:700; margin-bottom:1rem}
+.about h3{font-size:1.3rem; font-weight:700; margin-bottom:.4rem}
+.about p{margin:0 0 1rem; max-width:62ch; font-weight:400; font-size:1.0625rem}
 
 /* photo panels */
 .about .photo{position:relative; overflow:hidden; border-radius:1.25rem; aspect-ratio:4/3; display:grid; place-items:center}

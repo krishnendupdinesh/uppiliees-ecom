@@ -139,21 +139,21 @@ function CategoryCard({ item, delay }: { item: CategoryData; delay: number }) {
       </div>
 
       {/* Text */}
-      <div className="flex flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:gap-4 lg:p-6">
+      <div className="flex flex-col gap-1.5 p-3 sm:gap-2 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:gap-4 lg:p-6">
         <div>
-          <h3 className="text-[13px] font-bold leading-tight text-[#07552F] sm:text-base sm:leading-snug lg:text-xl">
+          <h3 className="text-sm font-bold leading-tight text-[#07552F] sm:text-lg sm:leading-snug lg:text-[22px]">
             {/* Short name on small phones, full name from 640px up */}
             <span className="sm:hidden" aria-hidden="true">
               {item.shortTitle}
             </span>
             <span className="hidden sm:inline">{item.title}</span>
           </h3>
-          <p className="mt-1.5 hidden text-[15px] leading-relaxed text-[#68786B] md:block">
+          <p className="mt-1.5 hidden text-base font-normal leading-relaxed text-[#68786B] md:block">
             {item.description}
           </p>
         </div>
 
-        <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#07552F] transition-colors duration-200 group-hover:text-[#4D9A18] sm:gap-1.5 sm:text-sm lg:mt-0.5">
+        <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-[#07552F] transition-colors duration-200 group-hover:text-[#4D9A18] sm:gap-1.5 sm:text-[15px] lg:mt-0.5">
           {item.linkText}
           <svg
             width="16"
@@ -187,14 +187,14 @@ export default function CategorySection() {
       className="bg-[#F4F8F1] px-3 py-[44px] sm:px-4 md:px-[3.3vw] md:py-[64px] lg:py-[90px]"
     >
       <div className="mx-auto max-w-[1280px]">
-        <div className="mx-auto max-w-[640px] text-center">
+        <div className="mx-auto max-w-[680px] text-center">
           <h2
             id="category-heading"
-            className="text-[26px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[42px]"
+            className="text-[28px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[44px]"
           >
             {SECTION_TEXT.heading}
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-[#68786B] md:text-base lg:text-[17px]">
+          <p className="mt-3 text-base font-normal leading-relaxed text-[#68786B] md:text-[17px] lg:text-[18px]">
             {SECTION_TEXT.subheading}
           </p>
         </div>

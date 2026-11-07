@@ -44,9 +44,9 @@ function FilterSidebar(props: SidebarProps) {
           ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between pb-4">
-          <h2 className="font-semibold text-[#063D27]">Filters</h2>
+          <h2 className="text-lg font-bold text-[#063D27]">Filters</h2>
           <div className="flex items-center gap-4">
-            <button onClick={onClear} className="text-sm text-gray-500 hover:text-black">
+            <button onClick={onClear} className="text-sm font-medium text-gray-600 hover:text-black">
               Clear All
             </button>
             <button onClick={onClose} className="lg:hidden" aria-label="Close filters">
@@ -57,10 +57,10 @@ function FilterSidebar(props: SidebarProps) {
 
         {/* Category */}
         <div className="border-t border-gray-200 py-4">
-          <p className="text-sm font-semibold mb-3">Category</p>
+          <p className="text-base font-bold text-[#063D27] mb-3">Category</p>
           <div className="space-y-2.5">
             {categories.map((category) => (
-              <label key={category} className="flex items-center gap-3 text-sm cursor-pointer">
+              <label key={category} className="flex items-center gap-3 text-[15px] font-normal cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedCategories.includes(category)}
@@ -75,10 +75,10 @@ function FilterSidebar(props: SidebarProps) {
 
         {/* Price */}
         <div className="border-t border-gray-200 py-4">
-          <p className="text-sm font-semibold mb-3">Price</p>
+          <p className="text-base font-bold text-[#063D27] mb-3">Price</p>
           <div className="space-y-2.5">
             {priceRanges.map((range, index) => (
-              <label key={range.label} className="flex items-center gap-3 text-sm cursor-pointer">
+              <label key={range.label} className="flex items-center gap-3 text-[15px] font-normal cursor-pointer">
                 <input
                   type="radio"
                   name="price"
@@ -152,9 +152,9 @@ export default function UppilieesProductListing({ collection }: ProductListingPr
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Heading */}
         <section className="text-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#063D27]">{title}</h1>
-          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
-          <p className="text-sm text-gray-500">{visibleProducts.length} Products</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#063D27]">{title}</h1>
+          <p className="text-base font-normal text-gray-600 mt-1.5">{subtitle}</p>
+          <p className="text-sm sm:text-base font-medium text-gray-500 mt-0.5">{visibleProducts.length} Products</p>
         </section>
 
         {/* Filter button (mobile) + sort */}

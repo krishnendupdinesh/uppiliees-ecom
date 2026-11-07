@@ -308,15 +308,15 @@ export default function Navbar() {
         </AnimatePresence>
       </div>
 
-      {/* 3. CATEGORY NAVIGATION (Desktop Centered Bar + Mobile Swipeable Chips) */}
+      {/* 3. CATEGORY NAVIGATION (Desktop Centered Bar) */}
       <nav
         ref={navRef}
-        className={`w-full bg-[#F4F8F1] border-b border-[#E6EFE3] transition-all duration-300 ${
+        className={`hidden lg:block w-full bg-[#F4F8F1] border-b border-[#E6EFE3] transition-all duration-300 ${
           isScrolled ? "sticky top-0 z-40 backdrop-blur-md bg-[#F4F8F1]/95 shadow-sm" : ""
         }`}
       >
-        {/* Desktop / Laptop / Tablet Centered Category Bar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 hidden lg:block">
+        {/* Desktop / Laptop Centered Category Bar */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center">
             <ul className="flex items-center justify-center gap-3 lg:gap-5 xl:gap-8 m-0 p-0 list-none">
               {NAV_CATEGORIES.map((cat) => {
@@ -343,7 +343,7 @@ export default function Navbar() {
                           }
                         }
                       }}
-                      className={`inline-flex items-center justify-center gap-1.5 px-2.5 xl:px-3 py-1 text-xs xl:text-sm font-extrabold uppercase tracking-wider whitespace-nowrap leading-none transition-colors no-underline ${
+                      className={`inline-flex items-center justify-center gap-1.5 px-2.5 xl:px-3 py-1 text-[13px] xl:text-[15px] font-bold uppercase tracking-wider whitespace-nowrap leading-none transition-colors no-underline ${
                         isActive || isHovered
                           ? "text-[#07552F]"
                           : "text-[#183629] hover:text-[#07552F]"
@@ -374,62 +374,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Horizontal Category Chips Bar */}
-        <div className="lg:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto no-scrollbar scroll-smooth">
-          {NAV_CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.name;
-            const isDropdownOpen = hoveredCategory === cat.name;
-
-            if (cat.hasMegaMenu) {
-              return (
-                <button
-                  key={cat.name}
-                  type="button"
-                  onClick={() => {
-                    if (isDropdownOpen) {
-                      setHoveredCategory(null);
-                    } else {
-                      setHoveredCategory(cat.name);
-                      setActiveCategory(cat.name);
-                    }
-                  }}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer border ${
-                    isActive || isDropdownOpen
-                      ? "bg-[#07552F] text-white border-[#07552F] shadow-sm"
-                      : "bg-white text-[#183629] border-[#E6EFE3] hover:bg-[#E6EFE3]"
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                  <ChevronDown
-                    className={`w-3 h-3 transition-transform duration-200 ${
-                      isDropdownOpen ? "rotate-180 text-[#C7E900]" : "text-[#8BA894]"
-                    }`}
-                  />
-                </button>
-              );
-            }
-
-            return (
-              <Link
-                key={cat.name}
-                href={cat.href}
-                onClick={() => {
-                  setActiveCategory(cat.name);
-                  setHoveredCategory(null);
-                }}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all whitespace-nowrap no-underline border ${
-                  isActive
-                    ? "bg-[#07552F] text-white border-[#07552F] shadow-sm"
-                    : "bg-white text-[#183629] border-[#E6EFE3] hover:bg-[#E6EFE3]"
-                }`}
-              >
-                {cat.name}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Responsive MegaMenu Dropdown Component */}
+        {/* Desktop MegaMenu Dropdown Component */}
         <div
           onMouseEnter={() => setHoveredCategory(hoveredCategory)}
           onMouseLeave={() => setHoveredCategory(null)}

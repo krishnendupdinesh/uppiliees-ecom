@@ -113,10 +113,10 @@ function NeedCard({ item, centered }: { item: NeedData; centered: boolean }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#063D27]/90 via-[#063D27]/40 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-0 p-4 md:p-6">
-          <h3 className="text-[20px] font-bold leading-snug text-white md:text-[22px]">
+          <h3 className="text-[21px] font-bold leading-snug text-white md:text-[24px]">
             {item.title}
           </h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-white/90 md:text-[15px]">
+          <p className="mt-1.5 text-[15px] font-normal leading-relaxed text-white/90 md:text-base">
             {item.description}
           </p>
 
@@ -192,14 +192,14 @@ export default function ShopByNeedsSection() {
       className="overflow-x-hidden bg-[#FAFBF6] px-4 py-[52px] md:px-[3.3vw] md:py-[64px] lg:py-[90px]"
     >
       <div className="mx-auto max-w-[1280px]">
-        <div className="mx-auto max-w-[640px] text-center">
+        <div className="mx-auto max-w-[680px] text-center">
           <h2
             id="needs-heading"
-            className="text-[28px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[42px]"
+            className="text-[30px] font-bold leading-tight tracking-tight text-[#07552F] md:text-4xl lg:text-[44px]"
           >
             {SECTION_TEXT.heading}
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-[#68786B] md:text-base lg:text-[17px]">
+          <p className="mt-3 text-base font-normal leading-relaxed text-[#68786B] md:text-[17px] lg:text-[18px]">
             {SECTION_TEXT.subheading}
           </p>
         </div>

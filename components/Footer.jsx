@@ -43,60 +43,60 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {/* Pillar 1 */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3.5 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#07552F] text-[#C7E900] flex items-center justify-center shrink-0 border border-[#4D9A18]/30">
                 <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide">
+                <h4 className="text-sm sm:text-base font-bold text-white tracking-wide">
                   100% Homestead
                 </h4>
-                <p className="text-[10px] sm:text-xs text-[#8BA894] mt-0.5 leading-snug">
+                <p className="text-xs sm:text-sm font-normal text-[#8BA894] mt-0.5 leading-snug">
                   Direct Kerala smallholders
                 </p>
               </div>
             </div>
 
             {/* Pillar 2 */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3.5 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#07552F] text-[#C7E900] flex items-center justify-center shrink-0 border border-[#4D9A18]/30">
                 <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide">
+                <h4 className="text-sm sm:text-base font-bold text-white tracking-wide">
                   Zero Toxins
                 </h4>
-                <p className="text-[10px] sm:text-xs text-[#8BA894] mt-0.5 leading-snug">
+                <p className="text-xs sm:text-sm font-normal text-[#8BA894] mt-0.5 leading-snug">
                   Chemical-free recipes
                 </p>
               </div>
             </div>
 
             {/* Pillar 3 */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3.5 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#07552F] text-[#C7E900] flex items-center justify-center shrink-0 border border-[#4D9A18]/30">
                 <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide">
+                <h4 className="text-sm sm:text-base font-bold text-white tracking-wide">
                   Express Delivery
                 </h4>
-                <p className="text-[10px] sm:text-xs text-[#8BA894] mt-0.5 leading-snug">
+                <p className="text-xs sm:text-sm font-normal text-[#8BA894] mt-0.5 leading-snug">
                   Fast all-India dispatch
                 </p>
               </div>
             </div>
 
             {/* Pillar 4 */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3.5 rounded-2xl bg-[#063D27]/70 border border-[#07552F]">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#07552F] text-[#C7E900] flex items-center justify-center shrink-0 border border-[#4D9A18]/30">
                 <HeartHandshake className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide">
+                <h4 className="text-sm sm:text-base font-bold text-white tracking-wide">
                   Kasavu Handloom
                 </h4>
-                <p className="text-[10px] sm:text-xs text-[#8BA894] mt-0.5 leading-snug">
+                <p className="text-xs sm:text-sm font-normal text-[#8BA894] mt-0.5 leading-snug">
                   Artisan weavers support
                 </p>
               </div>
@@ -119,7 +119,7 @@ export default function Footer() {
               />
             </Link>
 
-            <p className="text-xs sm:text-sm text-[#E6EFE3]/80 leading-relaxed max-w-sm">
+            <p className="text-sm sm:text-[15px] text-[#E6EFE3]/85 leading-relaxed max-w-sm">
               UPPILIEES brings the pure botanical wisdom and culinary traditions of Kerala homesteads straight to your family. Pure Nature. Pure Goodness.
             </p>
 
@@ -186,12 +186,12 @@ export default function Footer() {
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:contents">
             {/* Column 2: Kerala Categories */}
             <div className="lg:col-span-3 space-y-3">
-              <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white border-b border-[#07552F] pb-2 flex items-center justify-between">
+              <h4 className="text-sm sm:text-base font-bold uppercase tracking-wider text-white border-b border-[#07552F] pb-2 flex items-center justify-between">
                 <span>Categories</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#C7E900]" />
               </h4>
 
-              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-[#E6EFE3]/85 list-none m-0 p-0">
+              <ul className="space-y-2 text-sm sm:text-[15px] text-[#E6EFE3]/90 list-none m-0 p-0">
                 {shopCategories.map((cat) => (
                   <li key={cat.name}>
                     <Link
@@ -217,12 +217,12 @@ export default function Footer() {
 
             {/* Column 3: Customer Care & Policies */}
             <div className="lg:col-span-2 space-y-3">
-              <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white border-b border-[#07552F] pb-2 flex items-center justify-between">
+              <h4 className="text-sm sm:text-base font-bold uppercase tracking-wider text-white border-b border-[#07552F] pb-2 flex items-center justify-between">
                 <span>Customer Care</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#C7E900]" />
               </h4>
 
-              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-[#E6EFE3]/85 list-none m-0 p-0">
+              <ul className="space-y-2 text-sm sm:text-[15px] text-[#E6EFE3]/90 list-none m-0 p-0">
                 <li>
                   <Link
                     href="/contact"
@@ -269,7 +269,7 @@ export default function Footer() {
 
           {/* Column 4: Homestead Concierge & Newsletter (Full width on Mobile, 3-col on Desktop) */}
           <div className="lg:col-span-3 space-y-4 pt-2 lg:pt-0">
-            <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white border-b border-[#07552F] pb-2 flex items-center justify-between">
+            <h4 className="text-sm sm:text-base font-bold uppercase tracking-wider text-white border-b border-[#07552F] pb-2 flex items-center justify-between">
               <span>Homestead Concierge</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#C7E900]" />
             </h4>

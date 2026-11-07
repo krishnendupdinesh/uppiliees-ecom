@@ -28,13 +28,13 @@ export default function ProductCard({ product, href, footer }: Props) {
           )}
         </div>
 
-        <div className="p-3">
-          <p className="text-xs text-[#4D9A18] font-medium">{product.category}</p>
-          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 h-10 mt-1">{product.name}</h3>
+        <div className="p-3.5">
+          <p className="text-xs sm:text-sm text-[#4D9A18] font-semibold">{product.category}</p>
+          <h3 className="text-sm sm:text-base font-bold text-gray-900 line-clamp-2 min-h-[2.75rem] mt-1 leading-snug">{product.name}</h3>
 
-          <div className="flex items-center flex-wrap gap-x-2 mt-2">
-            <span className="font-semibold text-[#063D27]">{formatPrice(product.price)}</span>
-            <span className="text-xs text-gray-400 line-through">{formatPrice(product.mrp)}</span>
+          <div className="flex items-center flex-wrap gap-x-2 mt-2.5">
+            <span className="text-base sm:text-lg font-bold text-[#063D27]">{formatPrice(product.price)}</span>
+            <span className="text-xs sm:text-sm font-normal text-gray-400 line-through">{formatPrice(product.mrp)}</span>
           </div>
         </div>
       </Link>

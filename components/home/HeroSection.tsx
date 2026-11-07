@@ -214,21 +214,21 @@ function Slide({
         <div className="max-w-[520px] [text-shadow:0_1px_8px_rgba(0,0,0,0.5)] md:[text-shadow:none]">
           {slide.eyebrow && (
             <p
-              className={`mb-2 text-[11px] font-semibold tracking-[0.14em] md:mb-3 md:text-[13px] ${eyebrowColor}`}
+              className={`mb-2 text-xs font-bold tracking-[0.14em] md:mb-3 md:text-sm ${eyebrowColor}`}
             >
               {slide.eyebrow}
             </p>
           )}
 
           <h2
-            className={`text-[26px] font-bold leading-[1.1] tracking-tight md:text-5xl md:leading-[1.08] lg:text-[56px] xl:text-[64px] ${titleColor}`}
+            className={`text-[28px] font-bold leading-[1.1] tracking-tight md:text-5xl md:leading-[1.08] lg:text-[58px] xl:text-[66px] ${titleColor}`}
           >
             {slide.title}
           </h2>
 
           {slide.description && (
             <p
-              className={`mt-2 line-clamp-2 text-sm leading-relaxed md:mt-4 md:line-clamp-none md:text-base lg:text-[17px] ${descColor}`}
+              className={`mt-2.5 line-clamp-2 text-[15px] font-normal leading-relaxed md:mt-4 md:line-clamp-none md:text-[17px] lg:text-[19px] ${descColor}`}
             >
               {slide.description}
             </p>
