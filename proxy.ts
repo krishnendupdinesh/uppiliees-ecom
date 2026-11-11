@@ -38,7 +38,7 @@ async function verifyJwt(token: string, secret: string): Promise<{ id: any; role
   }
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("token")?.value;
   const secret = process.env.JWT_SECRET || "supersecretjwtkey_change_in_production_123456";

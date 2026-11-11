@@ -19,6 +19,8 @@ import {
 import { formatPrice, getDiscount } from "@/lib/format";
 import { api } from "@/lib/api";
 
+export const instant = false;
+
 type Params = Promise<{ category: string; slug: string }>;
 
 type ProductGroup = "wellness" | "food" | "handloom";
