@@ -31,6 +31,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -43,14 +44,14 @@ const PAGE_TEXT = {
 };
 
 const API = {
-  me: "http://localhost:5000/api/auth/me",
-  login: "http://localhost:5000/api/auth/login",
-  register: "http://localhost:5000/api/auth/register",
-  logout: "http://localhost:5000/api/auth/logout",
+  me: "/auth/me",
+  login: "/auth/login",
+  register: "/auth/register",
+  logout: "/auth/logout",
   updateProfile: "",
-  orders: "http://localhost:5000/api/orders/mine",
+  orders: "/orders/mine",
   addAddress: "",
-  changePassword: "http://localhost:5000/api/auth/change-password",
+  changePassword: "/auth/change-password",
 };
 
 /**
@@ -97,35 +98,6 @@ interface Order {
   status: string;
   total: number;
   items?: OrderItem[];
-}
-
-async function api<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
-  if (!endpoint) throw new Error("NOT_CONFIGURED");
-  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-  const url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
-  const res = await fetch(url, {
-    credentials: "include",
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  let data: unknown = null;
-  try {
-    data = await res.json();
-  } catch {
-    /* empty body */
-  }
-  if (!res.ok) {
-    const msg =
-      data && typeof data === "object" && "error" in data
-        ? String((data as { error: unknown }).error)
-        : data && typeof data === "object" && "message" in data
-        ? String((data as { message: unknown }).message)
-        : "REQUEST_FAILED";
-    const err = new Error(msg);
-    (err as Error & { status?: number }).status = res.status;
-    throw err;
-  }
-  return data as T;
 }
 
 function errorText(err: unknown, fallback: string) {

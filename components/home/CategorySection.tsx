@@ -139,9 +139,9 @@ function CategoryCard({ item, delay }: { item: CategoryData; delay: number }) {
       </div>
 
       {/* Text */}
-      <div className="flex flex-col gap-1.5 p-3 sm:gap-2 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:gap-4 lg:p-6">
+      <div className="flex flex-col gap-1 p-2 sm:gap-2 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:gap-4 lg:p-6">
         <div>
-          <h3 className="text-sm font-bold leading-tight text-[#07552F] sm:text-lg sm:leading-snug lg:text-[22px]">
+          <h3 className="text-xs sm:text-lg font-bold leading-tight text-[#07552F] sm:leading-snug lg:text-[22px]">
             {/* Short name on small phones, full name from 640px up */}
             <span className="sm:hidden" aria-hidden="true">
               {item.shortTitle}
@@ -153,11 +153,11 @@ function CategoryCard({ item, delay }: { item: CategoryData; delay: number }) {
           </p>
         </div>
 
-        <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-[#07552F] transition-colors duration-200 group-hover:text-[#4D9A18] sm:gap-1.5 sm:text-[15px] lg:mt-0.5">
+        <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-[#07552F] transition-colors duration-200 group-hover:text-[#4D9A18] sm:gap-1.5 sm:text-[15px] lg:mt-0.5">
           {item.linkText}
           <svg
-            width="16"
-            height="16"
+            width="14"
+            height="14"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -165,7 +165,7 @@ function CategoryCard({ item, delay }: { item: CategoryData; delay: number }) {
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
-            className="size-3.5 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none sm:size-4"
+            className="size-3 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none sm:size-4"
           >
             <path d="M5 12h14" />
             <path d="m13 6 6 6-6 6" />
@@ -200,7 +200,7 @@ export default function CategorySection() {
         </div>
 
         {/* 3 cards in ONE row on every screen size */}
-        <div className="mt-7 grid grid-cols-3 gap-2.5 sm:gap-4 md:mt-12 md:gap-6 lg:gap-8">
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4 md:mt-12 md:gap-6 lg:gap-8">
           {CATEGORIES.map((item, i) => (
             <CategoryCard key={item.id} item={item} delay={i * 100} />
           ))}

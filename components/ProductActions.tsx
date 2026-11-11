@@ -244,7 +244,7 @@ export default function ProductActions({
       </div>
 
       {/* Sticky Mobile Bar for Mobile Viewports */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6EFE3] p-3 flex sm:hidden items-center gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6EFE3] px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex sm:hidden items-center gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
         <button
           type="button"
           onClick={handleAdd}

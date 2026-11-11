@@ -268,21 +268,21 @@ function ProductListingContent({ collection }: ProductListingProps) {
         </section>
 
         {/* Filter button (mobile) + sort */}
-        <div ref={gridTopRef} className="flex items-center justify-between gap-3 mb-6 scroll-mt-20">
+        <div ref={gridTopRef} className="flex flex-wrap items-center justify-between gap-2.5 mb-6 scroll-mt-20">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center gap-2 border border-gray-300 rounded px-3 py-2 text-sm hover:border-[#07552F]"
+            className="lg:hidden flex items-center gap-1.5 border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm font-semibold text-[#07552F] hover:border-[#07552F] active:bg-[#F4F8F1]"
           >
-            <SlidersHorizontal size={16} />
+            <SlidersHorizontal size={15} />
             Filters
           </button>
 
-          <label className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 text-sm ml-auto">
-            <span className="text-gray-500">Sort by :</span>
+          <label className="flex items-center gap-1.5 border border-gray-300 rounded-md px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm ml-auto">
+            <span className="text-gray-500 font-medium whitespace-nowrap">Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="outline-none bg-transparent cursor-pointer"
+              className="outline-none bg-transparent cursor-pointer font-medium text-xs sm:text-sm text-[#07552F]"
             >
               {SORT_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -333,17 +333,17 @@ function ProductListingContent({ collection }: ProductListingProps) {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-1 sm:gap-2">
+              <nav aria-label="Pagination" className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                 {/* Previous */}
                 <button
                   type="button"
                   onClick={() => handlePageChange(activePage - 1)}
                   disabled={activePage <= 1}
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-gray-300 text-xs sm:text-sm font-semibold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-md border border-gray-300 text-xs sm:text-sm font-semibold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Previous page"
                 >
                   <ChevronLeft size={16} />
-                  <span className="hidden sm:inline">Previous</span>
+                  <span className="hidden xs:inline sm:inline">Prev</span>
                 </button>
 
                 {/* Page numbers */}
@@ -354,7 +354,7 @@ function ProductListingContent({ collection }: ProductListingProps) {
                       key={pageNum}
                       type="button"
                       onClick={() => handlePageChange(pageNum)}
-                      className={`min-w-[2.25rem] h-9 px-2 sm:px-3 rounded-md text-xs sm:text-sm font-bold transition ${
+                      className={`min-w-[2rem] sm:min-w-[2.25rem] h-8 sm:h-9 px-2 sm:px-3 rounded-md text-xs sm:text-sm font-bold transition ${
                         isCurrent
                           ? "bg-[#07552F] text-white shadow-sm"
                           : "border border-gray-200 text-gray-700 hover:bg-[#F4F8F1] hover:text-[#07552F]"
@@ -371,10 +371,10 @@ function ProductListingContent({ collection }: ProductListingProps) {
                   type="button"
                   onClick={() => handlePageChange(activePage + 1)}
                   disabled={activePage >= totalPages}
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-gray-300 text-xs sm:text-sm font-semibold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-md border border-gray-300 text-xs sm:text-sm font-semibold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Next page"
                 >
-                  <span className="hidden sm:inline">Next</span>
+                  <span className="hidden xs:inline sm:inline">Next</span>
                   <ChevronRight size={16} />
                 </button>
               </nav>

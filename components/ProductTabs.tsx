@@ -17,7 +17,7 @@ export default function ProductTabs({ tabs }: { tabs: ProductTab[] }) {
       {/* Tab bar */}
       <div
         role="tablist"
-        className="flex border-b border-gray-200 overflow-x-auto"
+        className="flex border-b border-gray-200 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tab) => {
           const isActive = tab.id === current.id;
@@ -27,10 +27,10 @@ export default function ProductTabs({ tabs }: { tabs: ProductTab[] }) {
               role="tab"
               aria-selected={isActive}
               onClick={() => setActive(tab.id)}
-              className={`flex-1 whitespace-nowrap px-4 py-3 text-sm transition-colors border-b-2 -mb-px ${
+              className={`shrink-0 whitespace-nowrap px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm transition-colors border-b-2 -mb-px ${
                 isActive
-                  ? "border-[#063D27] text-[#063D27] font-semibold"
-                  : "border-transparent text-gray-400 hover:text-[#063D27]"
+                  ? "border-[#063D27] text-[#063D27] font-bold"
+                  : "border-transparent text-gray-500 hover:text-[#063D27]"
               }`}
             >
               {tab.label}
