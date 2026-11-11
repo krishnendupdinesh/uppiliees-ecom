@@ -3,6 +3,7 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar/Navbar";
 import Footer from "@/components/Footer";
+import SiteChrome from "@/components/SiteChrome";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -24,9 +25,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${montserrat.variable} ${montserrat.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans font-normal">
-        <Navbar />
+        <SiteChrome>
+          <Navbar />
+        </SiteChrome>
         {children}
-        <Footer />
+        <SiteChrome>
+          <Footer />
+        </SiteChrome>
       </body>
     </html>
   );

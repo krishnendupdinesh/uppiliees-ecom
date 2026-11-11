@@ -30,6 +30,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -42,13 +43,14 @@ const PAGE_TEXT = {
 };
 
 const API = {
-  me: "", // ← e.g. "/api/auth/me"
-  login: "", // ← e.g. "/api/auth/login"
-  register: "", // ← e.g. "/api/auth/register"
-  logout: "", // ← e.g. "/api/auth/logout"
-  updateProfile: "", // ← e.g. "/api/account"
-  orders: "", // ← e.g. "/api/orders"
-  addAddress: "", // ← e.g. "/api/account/addresses"
+  me: "http://localhost:5000/api/auth/me",
+  login: "http://localhost:5000/api/auth/login",
+  register: "http://localhost:5000/api/auth/register",
+  logout: "http://localhost:5000/api/auth/logout",
+  updateProfile: "",
+  orders: "http://localhost:5000/api/orders/mine",
+  addAddress: "",
+  changePassword: "http://localhost:5000/api/auth/change-password",
 };
 
 /**
@@ -83,16 +85,24 @@ interface User {
   addresses?: Address[];
 }
 
-interface Order {
-  id: string;
-  date: string;
-  status: string;
-  total: number;
-  items?: { name: string; qty: number }[];
+interface OrderItem {
+  name: string;
+  qty: number;
 }
 
-async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
-  if (!url) throw new Error("NOT_CONFIGURED");
+interface Order {
+  id: string | number;
+  date?: string;
+  created_at?: string;
+  status: string;
+  total: number;
+  items?: OrderItem[];
+}
+
+async function api<T = unknown>(endpoint: string, init?: RequestInit): Promise<T> {
+  if (!endpoint) throw new Error("NOT_CONFIGURED");
+  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
   const res = await fetch(url, {
     credentials: "include",
     ...init,
@@ -106,7 +116,9 @@ async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const msg =
-      data && typeof data === "object" && "message" in data
+      data && typeof data === "object" && "error" in data
+        ? String((data as { error: unknown }).error)
+        : data && typeof data === "object" && "message" in data
         ? String((data as { message: unknown }).message)
         : "REQUEST_FAILED";
     const err = new Error(msg);
@@ -309,6 +321,7 @@ function PanelCard({
 type Status = { kind: "idle" } | { kind: "loading" } | { kind: "error"; text: string };
 
 function AuthPanel({ onDone }: { onDone: () => void }) {
+  const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [v, setV] = useState({ name: "", email: "", password: "" });
   const [errors, setErrors] = useState<Partial<Record<"name" | "email" | "password", string>>>({});
@@ -341,17 +354,22 @@ function AuthPanel({ onDone }: { onDone: () => void }) {
     setStatus({ kind: "loading" });
     try {
       if (mode === "login") {
-        await api(API.login, {
+        const res = await api<{ role?: string }>(API.login, {
           method: "POST",
           body: JSON.stringify({ email: v.email.trim(), password: v.password }),
         });
+        setStatus({ kind: "idle" });
+        if (res?.role === "admin") {
+          router.push("/admin");
+          return;
+        }
       } else {
         await api(API.register, {
           method: "POST",
           body: JSON.stringify({ name: v.name.trim(), email: v.email.trim(), password: v.password }),
         });
+        setStatus({ kind: "idle" });
       }
-      setStatus({ kind: "idle" });
       onDone();
     } catch (err) {
       setStatus({
@@ -563,7 +581,97 @@ function ProfileTab({ user, onUpdated }: { user: User; onUpdated: (u: User) => v
           {fb.kind === "error" && <Banner kind="error">{fb.text}</Banner>}
         </div>
       </form>
+
+      <div className="mt-8 border-t border-[#07552F]/15 pt-6">
+        <h3 className="text-base font-bold text-[#07552F]">Change Password</h3>
+        <ChangePasswordForm />
+      </div>
     </PanelCard>
+  );
+}
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fb, setFb] = useState<Feedback>({ kind: "idle" });
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (fb.kind === "loading") return;
+
+    if (newPassword.length < 8) {
+      setFb({ kind: "error", text: "New password must be at least 8 characters long." });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setFb({ kind: "error", text: "New passwords do not match." });
+      return;
+    }
+
+    setFb({ kind: "loading" });
+    try {
+      await api(API.changePassword, {
+        method: "PUT",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      setFb({ kind: "success", text: "Your password was updated." });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setFb({ kind: "error", text: err.message || "Could not change password." });
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} noValidate className="mt-4 space-y-4 max-w-md">
+      <Field id="cp-current" label="Current password">
+        <input
+          id="cp-current"
+          type="password"
+          required
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className={`${inputBase} border-[#07552F]/30`}
+        />
+      </Field>
+
+      <Field id="cp-new" label="New password">
+        <input
+          id="cp-new"
+          type="password"
+          required
+          minLength={8}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Min 8 characters"
+          className={`${inputBase} border-[#07552F]/30`}
+        />
+      </Field>
+
+      <Field id="cp-confirm" label="Confirm new password">
+        <input
+          id="cp-confirm"
+          type="password"
+          required
+          minLength={8}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className={`${inputBase} border-[#07552F]/30`}
+        />
+      </Field>
+
+      <PrimaryButton loading={fb.kind === "loading"} className="w-full sm:w-auto">
+        {fb.kind === "loading" ? "Updating…" : "Update password"}
+      </PrimaryButton>
+
+      <div aria-live="polite">
+        {fb.kind === "success" && <Banner kind="success">{fb.text}</Banner>}
+        {fb.kind === "error" && <Banner kind="error">{fb.text}</Banner>}
+      </div>
+    </form>
   );
 }
 
@@ -638,7 +746,7 @@ function OrdersTab({ preview }: { preview: boolean }) {
                   {o.status}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-[#68786B]">{formatDate(o.date)}</p>
+              <p className="mt-1 text-sm text-[#68786B]">{formatDate(o.created_at || o.date || "")}</p>
               {o.items && o.items.length > 0 && (
                 <p className="mt-2 text-[15px] text-[#173D2A]">
                   {o.items.map((i) => `${i.name} × ${i.qty}`).join(", ")}

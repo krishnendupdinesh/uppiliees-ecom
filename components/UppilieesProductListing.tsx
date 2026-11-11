@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
-import { type Collection, type PriceRange, productHref } from "@/data/products";
+import { type Collection, type PriceRange, type Product, productHref } from "@/data/products";
 import { getDiscount } from "@/lib/format";
+import { addToCart as addCartItem, getCart, updateCartItemQty, CART_EVENT } from "@/lib/cart";
+import { api } from "@/lib/api";
 import CartControl from "./CartControl";
 import ProductCard from "./ProductCard";
 
@@ -100,13 +102,63 @@ function FilterSidebar(props: SidebarProps) {
 /* LISTING PAGE                                                        */
 /* ------------------------------------------------------------------ */
 export default function UppilieesProductListing({ collection }: ProductListingProps) {
-  const { title, subtitle, products, priceRanges } = collection;
+  const { title, subtitle, products: initialProducts, priceRanges } = collection;
 
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState(SORT_OPTIONS[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer only
-  const [cart, setCart] = useState<Record<number, number>>({}); // product id -> quantity
+  const [cart, setCart] = useState<Record<string | number, number>>({}); // product id -> quantity
+
+  useEffect(() => {
+    const isAll = collection.slug === "products" || collection.slug === "all-products";
+    const endpoint = isAll
+      ? "/products?limit=1000"
+      : `/products?category=${encodeURIComponent(collection.slug)}&limit=1000`;
+
+    api<{ products: any[] }>(endpoint)
+      .then((data) => {
+        if (data?.products && data.products.length > 0) {
+          const mapped: Product[] = data.products.map((p) => {
+            const catSlug = p.category_slug || (p.category_name ? p.category_name.toLowerCase().replace(/\s+/g, "-") : collection.slug);
+            return {
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              category: p.category_name || p.category || (isAll ? catSlug : title),
+              price: Number(p.price),
+              mrp: Number(p.mrp),
+              description: p.description || undefined,
+              collectionSlug: catSlug,
+            };
+          });
+          setProducts(mapped);
+        }
+      })
+      .catch(() => {
+        // Fall back to initial products
+      });
+  }, [collection.slug, title]);
+
+  useEffect(() => {
+    const syncCart = () => {
+      const currentItems = getCart();
+      const map: Record<string | number, number> = {};
+      currentItems.forEach((i) => {
+        map[i.id] = i.qty;
+      });
+      setCart(map);
+    };
+
+    syncCart();
+    window.addEventListener(CART_EVENT, syncCart);
+    window.addEventListener("storage", syncCart);
+    return () => {
+      window.removeEventListener(CART_EVENT, syncCart);
+      window.removeEventListener("storage", syncCart);
+    };
+  }, []);
 
   // Unique category names, in the order they first appear
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
@@ -138,14 +190,22 @@ export default function UppilieesProductListing({ collection }: ProductListingPr
     setSelectedPriceRange(null);
   };
 
-  const addToCart = (id: number) => setCart((current) => ({ ...current, [id]: (current[id] || 0) + 1 }));
+  const handleAddToCart = (product: Product) => {
+    addCartItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.mrp > product.price ? product.mrp : undefined,
+      image: `/products/${product.slug}.jpg`,
+      alt: product.name,
+      href: productHref(collection, product),
+    }, 1);
+  };
 
-  const removeFromCart = (id: number) =>
-    setCart((current) => {
-      const updated = { ...current, [id]: (current[id] || 0) - 1 };
-      if (updated[id] <= 0) delete updated[id];
-      return updated;
-    });
+  const handleRemoveFromCart = (product: Product) => {
+    const currentQty = cart[product.id] || 0;
+    updateCartItemQty(product.id, currentQty - 1);
+  };
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -203,8 +263,8 @@ export default function UppilieesProductListing({ collection }: ProductListingPr
                   footer={
                     <CartControl
                       quantity={cart[product.id] || 0}
-                      onAdd={() => addToCart(product.id)}
-                      onRemove={() => removeFromCart(product.id)}
+                      onAdd={() => handleAddToCart(product)}
+                      onRemove={() => handleRemoveFromCart(product)}
                     />
                   }
                 />

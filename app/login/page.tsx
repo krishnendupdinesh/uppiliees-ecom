@@ -1,0 +1,6 @@
+import AccountPage from "../account/page";
+
+export default function LoginPage() {
+  return <AccountPage />;
+}
+

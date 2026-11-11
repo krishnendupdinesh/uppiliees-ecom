@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import WishlistButton from "@/components/WishlistButton";
+import { addToCart as addCartItem } from "@/lib/cart";
+import { api } from "@/lib/api";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the section content
@@ -140,12 +143,28 @@ function ProductCard({
     <article
       ref={ref}
       style={{ transitionDelay: visible ? `${delay}ms` : "0ms" }}
-      className={`group flex h-full w-full flex-col overflow-hidden rounded-xl border-2 border-[#07552F]/40 bg-white transition-all duration-700 ease-out hover:border-[#07552F] hover:shadow-[0_12px_30px_-12px_rgba(7,85,47,0.25)] motion-reduce:transition-none ${
+      className={`group relative flex h-full w-full flex-col overflow-hidden rounded-xl border-2 border-[#07552F]/40 bg-white transition-all duration-700 ease-out hover:border-[#07552F] hover:shadow-[0_12px_30px_-12px_rgba(7,85,47,0.25)] motion-reduce:transition-none ${
         visible
           ? "translate-y-0 opacity-100"
           : "translate-y-4 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100"
       }`}
     >
+      {/* Wishlist Button */}
+      <div className="absolute top-3 right-3 z-10">
+        <WishlistButton
+          item={{
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            originalPrice: product.originalPrice,
+            image: product.image,
+            alt: product.alt,
+            href: product.href,
+          }}
+        />
+      </div>
+
       {/* Image (links to product page) */}
       <Link
         href={product.href}
@@ -191,7 +210,24 @@ function ProductCard({
         {/* Add to Cart – pinned to the bottom so all cards line up */}
         <button
           type="button"
-          onClick={() => onAddToCart?.(product)}
+          onClick={() => {
+            if (onAddToCart) {
+              onAddToCart(product);
+            } else {
+              addCartItem(
+                {
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  originalPrice: product.originalPrice,
+                  image: product.image,
+                  alt: product.alt,
+                  href: product.href,
+                },
+                1
+              );
+            }
+          }}
           className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#07552F] px-4 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#063D27] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#07552F] md:mt-auto md:h-12 md:text-[15px]"
         >
           <svg
@@ -230,12 +266,44 @@ function ProductCard({
    ═══════════════════════════════════════════════════════════════ */
 
 export default function BestSellersSection({
-  products = BEST_SELLERS,
+  products: initialProducts,
   onAddToCart,
 }: {
   products?: BestSellerProduct[];
   onAddToCart?: (product: BestSellerProduct) => void;
 }) {
+  const [items, setItems] = useState<BestSellerProduct[]>(initialProducts || BEST_SELLERS);
+
+  useEffect(() => {
+    if (initialProducts) {
+      setItems(initialProducts);
+      return;
+    }
+    api<{ products: any[] }>("/products?featured=true")
+      .then((data) => {
+        if (data?.products && data.products.length > 0) {
+          const mapped: BestSellerProduct[] = data.products.map((p) => {
+            const catSlug = p.category_slug || (p.category_name ? p.category_name.toLowerCase().replace(/\s+/g, "-") : "products");
+            return {
+              id: p.id,
+              name: p.name,
+              description: p.description || "",
+              price: Number(p.price),
+              originalPrice: Number(p.mrp) > Number(p.price) ? Number(p.mrp) : undefined,
+              image: p.image || `/products/${p.slug}.jpg`,
+              alt: p.name,
+              href: `/${catSlug}/${p.slug}`,
+            };
+          });
+          setItems(mapped);
+        }
+      })
+      .catch(() => {
+        // Fall back to initial if API fails
+      });
+  }, [initialProducts]);
+
+  const products = items;
   return (
     <section
       aria-labelledby="bestsellers-heading"

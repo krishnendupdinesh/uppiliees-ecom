@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Product } from "@/data/products";
 import { formatPrice, getDiscount } from "@/lib/format";
 import ProductImage from "./ProductImage";
+import WishlistButton from "./WishlistButton";
 
 type Props = {
   product: Product;
@@ -14,8 +15,19 @@ type Props = {
 export default function ProductCard({ product, href, footer }: Props) {
   const discount = getDiscount(product);
 
+  const wishlistItem = {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    originalPrice: product.mrp > product.price ? product.mrp : undefined,
+    image: (product as any).image || `/products/${product.slug}.jpg`,
+    alt: product.name,
+    href,
+  };
+
   return (
-    <div className="group flex flex-col border border-gray-200 rounded-md overflow-hidden bg-white hover:shadow-lg transition">
+    <div className="group relative flex flex-col border border-gray-200 rounded-md overflow-hidden bg-white hover:shadow-lg transition">
       {/* Image + text are one big link to the product page */}
       <Link href={href} className="flex flex-col flex-1">
         <div className="relative">
@@ -38,6 +50,11 @@ export default function ProductCard({ product, href, footer }: Props) {
           </div>
         </div>
       </Link>
+
+      {/* Wishlist button */}
+      <div className="absolute top-2 right-2 z-10">
+        <WishlistButton item={wishlistItem} />
+      </div>
 
       {/* Outside the link, so clicking the button doesn't open the page */}
       {footer && <div className="px-3 pb-3">{footer}</div>}

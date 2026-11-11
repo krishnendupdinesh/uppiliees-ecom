@@ -22,6 +22,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -302,25 +304,58 @@ function WishlistSkeleton() {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function WishlistPage() {
+  const router = useRouter();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState<string>("");
 
-  const reload = useCallback(() => setItems(readWishlist()), []);
+  const loadFromApi = useCallback(async () => {
+    try {
+      const data = await api<any[]>("/wishlist");
+      const mapped: WishlistItem[] = (data || []).map((p) => {
+        const catSlug = p.category_slug || (p.category_name ? p.category_name.toLowerCase().replace(/\s+/g, "-") : "products");
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description || "",
+          price: Number(p.price),
+          originalPrice: Number(p.mrp) > Number(p.price) ? Number(p.mrp) : undefined,
+          image: p.image || `/products/${p.slug}.jpg`,
+          alt: p.name,
+          href: `/${catSlug}/${p.slug}`,
+        };
+      });
+      setItems(mapped);
+      writeWishlist(mapped);
+      setLoaded(true);
+    } catch (err: any) {
+      if (err?.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setItems(readWishlist());
+      setLoaded(true);
+    }
+  }, [router]);
 
   useEffect(() => {
-    reload();
-    setLoaded(true);
-    window.addEventListener(WISHLIST_EVENT, reload);
-    window.addEventListener("storage", reload);
+    loadFromApi();
+    window.addEventListener(WISHLIST_EVENT, loadFromApi);
     return () => {
-      window.removeEventListener(WISHLIST_EVENT, reload);
-      window.removeEventListener("storage", reload);
+      window.removeEventListener(WISHLIST_EVENT, loadFromApi);
     };
-  }, [reload]);
+  }, [loadFromApi]);
 
-  const remove = (item: WishlistItem) => {
-    const next = items.filter((i) => i.id !== item.id);
+  const remove = async (item: WishlistItem) => {
+    try {
+      await api(`/wishlist/${item.id}`, { method: "DELETE" });
+    } catch (err: any) {
+      if (err?.status === 401) {
+        router.push("/login");
+        return;
+      }
+    }
+    const next = items.filter((i) => String(i.id) !== String(item.id));
     setItems(next);
     writeWishlist(next);
     setNotice(`${item.name} was removed from your wishlist.`);
@@ -336,7 +371,12 @@ export default function WishlistPage() {
     setNotice(`${items.length} ${items.length === 1 ? "item was" : "items were"} added to your bag.`);
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+    for (const item of items) {
+      try {
+        await api(`/wishlist/${item.id}`, { method: "DELETE" });
+      } catch {}
+    }
     setItems([]);
     writeWishlist([]);
     setNotice("Your wishlist was cleared.");

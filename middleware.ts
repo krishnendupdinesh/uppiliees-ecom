@@ -1,0 +1,67 @@
+import { NextRequest, NextResponse } from "next/server";
+
+// Standard Web Crypto HMAC-SHA256 JWT verifier (compatible with Node and Edge runtimes without external packages)
+async function verifyJwt(token: string, secret: string): Promise<{ id: any; role: string } | null> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [headerB64, payloadB64, signatureB64] = parts;
+
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+
+    // Decode base64url to Uint8Array
+    const b64 = signatureB64.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const rawSig = Uint8Array.from(atob(b64 + pad), (c) => c.charCodeAt(0));
+
+    const data = enc.encode(`${headerB64}.${payloadB64}`);
+    const valid = await crypto.subtle.verify("HMAC", key, rawSig, data);
+    if (!valid) return null;
+
+    const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(payloadJson);
+
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
+  const secret = process.env.JWT_SECRET || "supersecretjwtkey_change_in_production_123456";
+
+  const user = token ? await verifyJwt(token, secret) : null;
+
+  // Protect /admin routes -> require role === 'admin'
+  if (pathname.startsWith("/admin")) {
+    if (!user || user.role !== "admin") {
+      const loginUrl = new URL("/account", req.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Protect /account routes when viewing signed-in sections (optional guard)
+  if (pathname === "/account" && req.nextUrl.searchParams.get("requireAuth") === "true") {
+    if (!user) {
+      return NextResponse.redirect(new URL("/account", req.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = { matcher: ["/admin/:path*", "/account"] };

@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { NAV_CATEGORIES, ANNOUNCEMENTS } from "@/data/navigation";
 import { PRODUCTS, getProductsByCategory } from "@/data/products";
+import { getWishlist, WISHLIST_EVENT } from "@/lib/wishlist";
+import { getCartTotalCount, CART_EVENT } from "@/lib/cart";
 import MegaMenu from "./MegaMenu";
 import SearchDropdown from "./SearchDropdown";
 
@@ -39,8 +41,31 @@ export default function Navbar() {
   const navRef = useRef(null);
 
   // Cart & Wishlist states
-  const [cart] = useState([]);
-  const [wishlist] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlist, setWishlist] = useState([]);
+
+  useEffect(() => {
+    setWishlist(getWishlist());
+    setCartCount(getCartTotalCount());
+
+    const syncWishlist = () => {
+      setWishlist(getWishlist());
+    };
+    const syncCart = () => {
+      setCartCount(getCartTotalCount());
+    };
+
+    window.addEventListener(WISHLIST_EVENT, syncWishlist);
+    window.addEventListener(CART_EVENT, syncCart);
+    window.addEventListener("storage", syncWishlist);
+    window.addEventListener("storage", syncCart);
+    return () => {
+      window.removeEventListener(WISHLIST_EVENT, syncWishlist);
+      window.removeEventListener(CART_EVENT, syncCart);
+      window.removeEventListener("storage", syncWishlist);
+      window.removeEventListener("storage", syncCart);
+    };
+  }, []);
 
   // Auto-rotate announcement bar
   useEffect(() => {
@@ -238,7 +263,7 @@ export default function Navbar() {
             >
               <ShoppingBag className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#C7E900]" />
               <span className="text-xs font-bold tracking-wide">
-                <span className="hidden sm:inline">Bag </span>({cart.length})
+                <span className="hidden sm:inline">Bag </span>({cartCount})
               </span>
             </Link>
           </div>

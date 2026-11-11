@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -128,33 +129,14 @@ async function submitContact(values: FormValues): Promise<SubmitResult> {
   const payload = {
     name: values.name.trim(),
     email: values.email.trim(),
-    phone: values.phone.trim(),
-    topic: values.topic,
     message: values.message.trim(),
   };
 
-  if (CONTACT_ENDPOINT) {
-    const res = await fetch(CONTACT_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error("Request failed");
-    return "sent";
-  }
-
-  if (CONTACT_INFO.email) {
-    const subject = encodeURIComponent(`${payload.topic} – ${payload.name}`);
-    const body = encodeURIComponent(
-      `${payload.message}\n\n— ${payload.name}\n${payload.email}${
-        payload.phone ? `\n${payload.phone}` : ""
-      }`
-    );
-    window.location.href = `mailto:${CONTACT_INFO.email}?subject=${subject}&body=${body}`;
-    return "mailto";
-  }
-
-  throw new Error("NOT_CONFIGURED");
+  await api("/contact", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return "sent";
 }
 
 /* ═══════════════════════════════════════════════════════════════
