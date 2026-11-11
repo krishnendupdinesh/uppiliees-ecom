@@ -46,7 +46,7 @@ const CATEGORIES: CategoryData[] = [
     description: "Nature-inspired essentials for your everyday self-care.",
     image: "/images/category-herbal.jpg", // ← change image URL here
     alt: "Herbal, beauty and wellness products",
-    href: "/collections/herbal-beauty-wellness",
+    href: "/herbal-beauty",
     linkText: "Shop Now",
     position: "center",
   },
@@ -57,7 +57,7 @@ const CATEGORIES: CategoryData[] = [
     description: "Authentic flavours made the traditional Kerala way.",
     image: "/images/category-food.jpg", // ← change image URL here
     alt: "Traditional Kerala food products",
-    href: "/collections/kerala-food",
+    href: "/traditional-foods",
     linkText: "Shop Now",
     position: "center",
   },
@@ -68,7 +68,7 @@ const CATEGORIES: CategoryData[] = [
     description: "Handwoven pieces that celebrate Kerala craftsmanship.",
     image: "/images/category-handlooms.jpg", // ← change image URL here
     alt: "Traditional handloom products",
-    href: "/collections/handloom",
+    href: "/handloom",
     linkText: "Shop Now",
     position: "center",
   },

@@ -45,7 +45,7 @@ const NEEDS: NeedData[] = [
     description: "Simple essentials for your daily skin routine.",
     image: "/images/skincare1.jpg", // ← change image URL here
     alt: "Everyday skincare products",
-    href: "/collections/everyday-skincare",
+    href: "/herbal-beauty",
     linkText: "Explore",
     position: "center",
   },
@@ -55,7 +55,7 @@ const NEEDS: NeedData[] = [
     description: "Explore products for your skin care routine.",
     image: "/images/skincare.jpg", // ← change image URL here
     alt: "Skin nourishment products with botanical ingredients",
-    href: "/collections/skin-nourishment",
+    href: "/herbal-beauty",
     linkText: "Explore",
     position: "center",
   },
@@ -65,7 +65,7 @@ const NEEDS: NeedData[] = [
     description: "Simple essentials for your daily hair routine.",
     image: "/images/haircare1.jpg", // ← change image URL here
     alt: "Everyday haircare products",
-    href: "/collections/everyday-haircare",
+    href: "/herbal-beauty",
     linkText: "Explore",
     position: "center",
   },
@@ -75,7 +75,7 @@ const NEEDS: NeedData[] = [
     description: "Explore products for your hair care routine.",
     image: "/images/haircare.jpg", // ← change image URL here
     alt: "Hair nourishment products with botanical ingredients",
-    href: "/collections/hair-nourishment",
+    href: "/herbal-beauty",
     linkText: "Explore",
     position: "center",
   },

@@ -17,7 +17,7 @@ export const NAV_CATEGORIES = [
   },
   {
     name: "ALL PRODUCTS",
-    href: "/products",
+    href: "/shop",
     hasMegaMenu: true,
     categoryKey: "All Products",
   },

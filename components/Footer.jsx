@@ -225,7 +225,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm sm:text-[15px] text-[#E6EFE3]/90 list-none m-0 p-0">
                 <li>
                   <Link
-                    href="/contact"
+                    href="/track-order"
                     className="hover:text-[#C7E900] transition-colors no-underline block py-0.5 leading-snug"
                   >
                     Track Dispatch
@@ -233,7 +233,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/about"
+                    href="/shipping-policy"
                     className="hover:text-[#C7E900] transition-colors no-underline block py-0.5 leading-snug"
                   >
                     Shipping Policy
@@ -241,7 +241,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/about"
+                    href="/quality-standards"
                     className="hover:text-[#C7E900] transition-colors no-underline block py-0.5 leading-snug"
                   >
                     Quality Standards
@@ -249,7 +249,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/about"
+                    href="/privacy-policy"
                     className="hover:text-[#C7E900] transition-colors no-underline block py-0.5 leading-snug"
                   >
                     Privacy Policy
@@ -257,7 +257,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/about"
+                    href="/terms-and-conditions"
                     className="hover:text-[#C7E900] transition-colors no-underline block py-0.5 leading-snug"
                   >
                     Terms &amp; Conditions

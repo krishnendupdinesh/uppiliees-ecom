@@ -1,7 +1,5 @@
-import UppilieesProductListing from "@/components/UppilieesProductListing";
-import { allProducts } from "@/data/products";
+import { redirect } from "next/navigation";
 
-export default function AllProductsAliasPage() {
-  return <UppilieesProductListing collection={allProducts} />;
+export default function AllProductsRedirect() {
+  redirect("/shop");
 }
-

@@ -149,12 +149,24 @@ export const allProducts: Collection = {
 /* ------------------------------------------------------------------ */
 export const collections: Collection[] = [handloom, herbalBeauty, traditionalFoods];
 
-/** URL of a product's detail page, e.g. /herbal-beauty/ashwagandha-powder */
-export const productHref = (collection: Collection, product: Product) =>
-  `/${product.collectionSlug ?? collection.slug}/${product.slug}`;
+/** URL of a product's detail page: /products/{slug} */
+export const productHref = (_collection: Collection, product: Product) =>
+  `/products/${product.slug}`;
+
+/** Finds a product by its slug across all collections. */
+export function findProductBySlug(productSlug: string) {
+  for (const collection of collections) {
+    const product = collection.products.find((p) => p.slug === productSlug);
+    if (product) return { collection, product };
+  }
+  return undefined;
+}
 
 /** Finds a product from the two URL segments. Returns undefined if either is unknown. */
 export function findProduct(collectionSlug: string, productSlug: string) {
+  if (collectionSlug === "products") {
+    return findProductBySlug(productSlug);
+  }
   const collection = collections.find((c) => c.slug === collectionSlug);
   const product = collection?.products.find((p) => p.slug === productSlug);
   return collection && product ? { collection, product } : undefined;
@@ -178,21 +190,21 @@ export const PRODUCTS: NavProduct[] = [
     name: "Dried Vegetables",
     category: "Kerala Food Products",
     slug: "dried-vegetables",
-    href: "/traditional-foods/dried-vegetables",
+    href: "/products/dried-vegetables",
   },
   {
     id: "dp-2",
     name: "Dried Meat",
     category: "Kerala Food Products",
     slug: "dried-meat",
-    href: "/traditional-foods/dried-meat",
+    href: "/products/dried-meat",
   },
   {
     id: "dp-3",
     name: "Dried Fish",
     category: "Kerala Food Products",
     slug: "dried-fish",
-    href: "/traditional-foods/dried-fish",
+    href: "/products/dried-fish",
   },
 
   // 2. Herbal & Wellness
@@ -201,105 +213,105 @@ export const PRODUCTS: NavProduct[] = [
     name: "Changalam Paranda Pain Relief Oil",
     category: "Herbal & Wellness",
     slug: "changalam-paranda-pain-relief-oil",
-    href: "/herbal-beauty/changalam-paranda-pain-relief-oil",
+    href: "/products/changalam-paranda-pain-relief-oil",
   },
   {
     id: "hw-2",
     name: "BabyGlow – Baby Massage Oil",
     category: "Herbal & Wellness",
     slug: "babyglow-baby-massage-oil",
-    href: "/herbal-beauty/babyglow-baby-massage-oil",
+    href: "/products/babyglow-baby-massage-oil",
   },
   {
     id: "hw-3",
     name: "PULARI Herbal Hair Growth Oil",
     category: "Herbal & Wellness",
     slug: "pulari-herbal-hair-growth-oil",
-    href: "/herbal-beauty/pulari-herbal-hair-growth-oil",
+    href: "/products/pulari-herbal-hair-growth-oil",
   },
   {
     id: "hw-4",
     name: "Glow Plus Fairness Powder",
     category: "Herbal & Wellness",
     slug: "glow-plus-fairness-powder",
-    href: "/herbal-beauty/glow-plus-fairness-powder",
+    href: "/products/glow-plus-fairness-powder",
   },
   {
     id: "hw-5",
     name: "Glow Plus Skin Brightening Moisturizing Cream",
     category: "Herbal & Wellness",
     slug: "glow-plus-skin-brightening-cream",
-    href: "/herbal-beauty/glow-plus-skin-brightening-cream",
+    href: "/products/glow-plus-skin-brightening-cream",
   },
   {
     id: "hw-6",
     name: "Sankhu Puspam Face Wash",
     category: "Herbal & Wellness",
     slug: "sankhu-puspam-face-wash",
-    href: "/herbal-beauty/sankhu-puspam-face-wash",
+    href: "/products/sankhu-puspam-face-wash",
   },
   {
     id: "hw-7",
     name: "Glow Plus Lip Care Cream",
     category: "Herbal & Wellness",
     slug: "glow-plus-lip-care-cream",
-    href: "/herbal-beauty/glow-plus-lip-care-cream",
+    href: "/products/glow-plus-lip-care-cream",
   },
   {
     id: "hw-8",
     name: "Homemade Baby Glow Urukku Velichenna (Virgin Coconut Oil)",
     category: "Herbal & Wellness",
     slug: "baby-glow-urukku-velichenna",
-    href: "/herbal-beauty/baby-glow-urukku-velichenna",
+    href: "/products/baby-glow-urukku-velichenna",
   },
   {
     id: "hw-9",
     name: "PainoPlus Pain Relief Balm (Changalam Paranda Balm)",
     category: "Herbal & Wellness",
     slug: "painoplus-pain-relief-balm",
-    href: "/herbal-beauty/painoplus-pain-relief-balm",
+    href: "/products/painoplus-pain-relief-balm",
   },
   {
     id: "hw-10",
     name: "Stretch Ease – Stretch Mark Cream",
     category: "Herbal & Wellness",
     slug: "stretch-ease-stretch-mark-cream",
-    href: "/herbal-beauty/stretch-ease-stretch-mark-cream",
+    href: "/products/stretch-ease-stretch-mark-cream",
   },
   {
     id: "hw-11",
     name: "Ojas Boost – Ojus Enhancing Powder",
     category: "Herbal & Wellness",
     slug: "ojas-boost-herbal-powder",
-    href: "/herbal-beauty/ojas-boost-herbal-powder",
+    href: "/products/ojas-boost-herbal-powder",
   },
   {
     id: "hw-12",
     name: "Ashwagandha Powder",
     category: "Herbal & Wellness",
     slug: "ashwagandha-powder",
-    href: "/herbal-beauty/ashwagandha-powder",
+    href: "/products/ashwagandha-powder",
   },
   {
     id: "hw-13",
     name: "Naikuruna Powder",
     category: "Herbal & Wellness",
     slug: "naikuruna-powder",
-    href: "/herbal-beauty/naikuruna-powder",
+    href: "/products/naikuruna-powder",
   },
   {
     id: "hw-14",
     name: "Kalonji Oil – Pure Black Seed Oil",
     category: "Herbal & Wellness",
     slug: "kalonji-black-seed-oil",
-    href: "/herbal-beauty/kalonji-black-seed-oil",
+    href: "/products/kalonji-black-seed-oil",
   },
   {
     id: "hw-15",
     name: "MOZI OUT – Herbal Mosquito Repellent",
     category: "Herbal & Wellness",
     slug: "mozi-out-herbal-mosquito-repellent",
-    href: "/herbal-beauty/mozi-out-herbal-mosquito-repellent",
+    href: "/products/mozi-out-herbal-mosquito-repellent",
   },
 
   // 3. Kerala Food Products
@@ -308,70 +320,70 @@ export const PRODUCTS: NavProduct[] = [
     name: "Kannan Kaya Powder",
     category: "Kerala Food Products",
     slug: "kannan-kaya-powder",
-    href: "/traditional-foods/kannan-kaya-powder",
+    href: "/products/kannan-kaya-powder",
   },
   {
     id: "kf-2",
     name: "Kannan Kaya Dried Chips",
     category: "Kerala Food Products",
     slug: "kannan-kaya-dried-chips",
-    href: "/traditional-foods/kannan-kaya-dried-chips",
+    href: "/products/kannan-kaya-dried-chips",
   },
   {
     id: "kf-3",
     name: "Banana Powder",
     category: "Kerala Food Products",
     slug: "homemade-banana-powder",
-    href: "/traditional-foods/homemade-banana-powder",
+    href: "/products/homemade-banana-powder",
   },
   {
     id: "kf-4",
     name: "Banana Dried Chips",
     category: "Kerala Food Products",
     slug: "banana-dried-chips",
-    href: "/traditional-foods/banana-dried-chips",
+    href: "/products/banana-dried-chips",
   },
   {
     id: "kf-5",
     name: "Ragi Powder",
     category: "Kerala Food Products",
     slug: "ragi-powder",
-    href: "/traditional-foods/ragi-powder",
+    href: "/products/ragi-powder",
   },
   {
     id: "kf-6",
     name: "Homemade Sambar Powder",
     category: "Kerala Food Products",
     slug: "homemade-sambar-powder",
-    href: "/traditional-foods/homemade-sambar-powder",
+    href: "/products/homemade-sambar-powder",
   },
   {
     id: "kf-7",
     name: "Banana Figs",
     category: "Kerala Food Products",
     slug: "banana-figs",
-    href: "/traditional-foods/banana-figs",
+    href: "/products/banana-figs",
   },
   {
     id: "kf-8",
     name: "Prawns Pickle",
     category: "Kerala Food Products",
     slug: "homemade-prawns-pickle",
-    href: "/traditional-foods/homemade-prawns-pickle",
+    href: "/products/homemade-prawns-pickle",
   },
   {
     id: "kf-9",
     name: "Homemade Cow Ghee",
     category: "Kerala Food Products",
     slug: "homemade-pure-cow-ghee",
-    href: "/traditional-foods/homemade-pure-cow-ghee",
+    href: "/products/homemade-pure-cow-ghee",
   },
   {
     id: "kf-10",
     name: "Homemade Pure Pork Lard",
     category: "Kerala Food Products",
     slug: "homemade-pork-lard",
-    href: "/traditional-foods/homemade-pork-lard",
+    href: "/products/homemade-pork-lard",
   },
 
   // 4. Handloom
@@ -380,21 +392,21 @@ export const PRODUCTS: NavProduct[] = [
     name: "Sarees",
     category: "Handloom",
     slug: "kerala-handloom-sarees",
-    href: "/handloom/kerala-handloom-sarees",
+    href: "/products/kerala-handloom-sarees",
   },
   {
     id: "hl-2",
     name: "Set Mundu",
     category: "Handloom",
     slug: "kerala-handloom-set-mundu",
-    href: "/handloom/kerala-handloom-set-mundu",
+    href: "/products/kerala-handloom-set-mundu",
   },
   {
     id: "hl-3",
     name: "Dhotis",
     category: "Handloom",
     slug: "kerala-handloom-dhotis",
-    href: "/handloom/kerala-handloom-dhotis",
+    href: "/products/kerala-handloom-dhotis",
   },
 ];
 

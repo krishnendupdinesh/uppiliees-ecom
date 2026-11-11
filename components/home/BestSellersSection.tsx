@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import WishlistButton from "@/components/WishlistButton";
 import { addToCart as addCartItem } from "@/lib/cart";
+import { setBuyNowItem } from "@/lib/buyNow";
 import { api } from "@/lib/api";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -51,39 +53,43 @@ export interface BestSellerProduct {
 const BEST_SELLERS: BestSellerProduct[] = [
   {
     id: 1,
-    name: "Ashwagandha Powder", // ← PLACEHOLDER
-    description: "Short product description goes here.",
-    price: 499, // ← PLACEHOLDER
-    image: "/images/ashwagandha.jpg", // ← change image URL here
-    alt: "Product Name 1",
-    href: "/product/product-1",
+    name: "Ashwagandha Powder",
+    description: "Natural Ashwagandha Herbal Powder for holistic wellness and vitality.",
+    price: 199,
+    originalPrice: 260,
+    image: "/images/ashwagandha.jpg",
+    alt: "Ashwagandha Powder",
+    href: "/products/ashwagandha-powder",
   },
   {
     id: 2,
     name: "Banana Dried Chips",
-    description: "Short product description goes here.",
-    price: 349,
+    description: "Traditional Kerala Dried Banana Chips crispy, salted and delicious.",
+    price: 159,
+    originalPrice: 199,
     image: "/images/driedchip.jpg",
-    alt: "Product Name 2",
-    href: "/product/product-2",
+    alt: "Banana Dried Chips",
+    href: "/products/banana-dried-chips",
   },
   {
     id: 3,
     name: "Kerala Set Mundu",
-    description: "Short product description goes here.",
-    price: 649,
+    description: "Traditional Kerala Handloom Set Mundu woven with authentic kasavu.",
+    price: 1899,
+    originalPrice: 2399,
     image: "/images/setmundu2.jpg",
-    alt: "Product Name 3",
-    href: "/product/product-3",
+    alt: "Kerala Handloom Set Mundu",
+    href: "/products/kerala-handloom-set-mundu",
   },
   {
     id: 4,
     name: "Face Wash",
-    description: "Short product description goes here.",
-    price: 299,
+    description: "Sankhu Puspam Herbal Face Wash for gentle, pure skin refreshment.",
+    price: 159,
+    originalPrice: 199,
     image: "/images/facewash.jpg",
-    alt: "Product Name 4",
-    href: "/product/product-4",
+    alt: "Sankhu Puspam Face Wash",
+    href: "/products/sankhu-puspam-face-wash",
   },
 ];
 
@@ -135,9 +141,39 @@ function ProductCard({
   delay: number;
   onAddToCart?: (product: BestSellerProduct) => void;
 }) {
+  const router = useRouter();
   const { ref, visible } = useInView<HTMLElement>();
   const hasDiscount =
     product.originalPrice !== undefined && product.originalPrice > product.price;
+
+  const isHandloom =
+    product.name.toLowerCase().includes("mundu") ||
+    product.name.toLowerCase().includes("saree") ||
+    product.name.toLowerCase().includes("dhoti") ||
+    product.href.includes("handloom");
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isHandloom) {
+      router.push(product.href);
+      return;
+    }
+
+    setBuyNowItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: product.image,
+      alt: product.alt,
+      href: product.href,
+      qty: 1,
+    });
+
+    router.push("/checkout");
+  };
 
   return (
     <article
@@ -182,8 +218,8 @@ function ProductCard({
       </Link>
 
       {/* Details */}
-      <div className="flex flex-1 flex-col p-4 md:p-5">
-        <h3 className="text-[17px] font-bold leading-snug text-[#07552F] md:text-[19px]">
+      <div className="flex flex-1 flex-col p-3.5 sm:p-4 md:p-5">
+        <h3 className="text-[16px] sm:text-[17px] font-bold leading-snug text-[#07552F] md:text-[19px]">
           <Link
             href={product.href}
             className="transition-colors duration-200 hover:text-[#4D9A18] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#07552F]"
@@ -192,61 +228,60 @@ function ProductCard({
           </Link>
         </h3>
 
-        <p className="mt-1.5 line-clamp-2 text-[15px] font-normal leading-relaxed text-[#68786B] md:text-base">
+        <p className="mt-1 line-clamp-2 text-xs sm:text-[14px] font-normal leading-relaxed text-[#68786B] md:text-base">
           {product.description}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-xl font-bold text-[#173D2A] md:text-[22px]">
+        <div className="mt-2.5 sm:mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="text-lg sm:text-xl font-bold text-[#173D2A] md:text-[22px]">
             {formatPrice(product.price)}
           </span>
           {hasDiscount && (
-            <span className="text-[15px] font-normal text-[#68786B] line-through">
+            <span className="text-xs sm:text-[15px] font-normal text-[#68786B] line-through">
               {formatPrice(product.originalPrice as number)}
             </span>
           )}
         </div>
 
-        {/* Add to Cart – pinned to the bottom so all cards line up */}
-        <button
-          type="button"
-          onClick={() => {
-            if (onAddToCart) {
-              onAddToCart(product);
-            } else {
-              addCartItem(
-                {
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  originalPrice: product.originalPrice,
-                  image: product.image,
-                  alt: product.alt,
-                  href: product.href,
-                },
-                1
-              );
-            }
-          }}
-          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#07552F] px-4 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#063D27] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#07552F] md:mt-auto md:h-12 md:text-[15px]"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        {/* Buttons: Add to Cart (outline) & Buy Now (solid) */}
+        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 md:mt-auto">
+          <button
+            type="button"
+            onClick={() => {
+              if (isHandloom) {
+                router.push(product.href);
+                return;
+              }
+              if (onAddToCart) {
+                onAddToCart(product);
+              } else {
+                addCartItem(
+                  {
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    originalPrice: product.originalPrice,
+                    image: product.image,
+                    alt: product.alt,
+                    href: product.href,
+                  },
+                  1
+                );
+              }
+            }}
+            className="flex-1 inline-flex h-10 sm:h-11 items-center justify-center gap-1.5 rounded-md border-2 border-[#07552F] bg-white px-2.5 text-xs sm:text-sm font-semibold text-[#07552F] transition-colors duration-200 hover:bg-[#F4F8F1]"
           >
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-            <path d="M3 6h18" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-          </svg>
-          {SECTION_TEXT.addToCartText}
-        </button>
+            Add to Cart
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            className="flex-1 inline-flex h-10 sm:h-11 items-center justify-center rounded-md bg-[#07552F] px-2.5 text-xs sm:text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#063D27] shadow-sm"
+          >
+            <span>Buy Now</span>
+          </button>
+        </div>
       </div>
     </article>
   );

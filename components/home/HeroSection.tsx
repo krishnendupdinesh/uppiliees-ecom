@@ -63,8 +63,8 @@ const HERO_SLIDES: HeroSlideData[] = [
     title: "Discover the Goodness of Nature",
     description:
       "Explore nature-inspired skincare essentials designed to make your everyday beauty routine special.",
-    primaryButton: { text: "Shop Skincare", link: "/skincare" },
-    secondaryButton: { text: "Explore Collection", link: "/collections" },
+    primaryButton: { text: "Shop Skincare", link: "/herbal-beauty" },
+    secondaryButton: { text: "Explore Collection", link: "/shop" },
     align: "left",
     tone: "dark",
     position: "center",
@@ -79,8 +79,8 @@ const HERO_SLIDES: HeroSlideData[] = [
     title: "Woven with Kerala Tradition",
     description:
       "Explore traditional Kerala handloom products, rooted in the craft of the loom.",
-    primaryButton: { text: "Shop Handlooms", link: "/collections/handloom" },
-    secondaryButton: { text: "Discover More", link: "/collections" },
+    primaryButton: { text: "Shop Handlooms", link: "/handloom" },
+    secondaryButton: { text: "Discover More", link: "/shop" },
     align: "right",
     tone: "light", // ← white text for this darker image
     mobilePosition: "25% center", // loom is on the left side of this banner
@@ -94,7 +94,7 @@ const HERO_SLIDES: HeroSlideData[] = [
     title: "The Authentic Taste of Kerala",
     description:
       "Discover traditional Kerala curry powders and spices for everyday home cooking.",
-    primaryButton: { text: "Shop Food Products", link: "/collections/kerala-food" },
+    primaryButton: { text: "Shop Food Products", link: "/traditional-foods" },
     secondaryButton: { text: "Explore Products", link: "/shop" },
     align: "left",
     tone: "light", // ← white text for this darker image
