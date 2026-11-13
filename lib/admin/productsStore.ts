@@ -44,6 +44,7 @@ export function saveCustomProduct(p: Partial<Product> & { name: string }): Produ
     featured: Boolean(p.featured),
     createdAt: p.createdAt || new Date().toISOString(),
 
+    sizes: Array.isArray(p.sizes) ? p.sizes : [],
     benefits: p.benefits || "",
     howToUse: p.howToUse || "",
     ingredients: p.ingredients || "",

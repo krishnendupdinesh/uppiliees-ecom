@@ -12,6 +12,8 @@ import {
   Upload,
   FileText,
   HelpCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import type { Product } from "@/lib/admin/types";
 import { api } from "@/lib/api";
@@ -36,6 +38,12 @@ export default function ProductForm({ product }: Props) {
     images: (product?.images && product.images.length > 0 ? product.images : [product?.image ?? ""]).slice(0, 4),
     description: product?.description ?? "",
     featured: product?.featured ?? false,
+
+    // Multiple Sizes and separate pricing
+    sizes: (product?.sizes && product.sizes.length > 0
+      ? product.sizes
+      : []
+    ) as { size: string; price: number; mrp?: number; stock?: number }[],
 
     // Rich descriptive sections
     benefits: product?.benefits ?? "",
@@ -62,7 +70,7 @@ export default function ProductForm({ product }: Props) {
       .catch(() => {});
   }, [product]);
 
-  const set = (k: string, v: string | number | boolean | string[]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   // Helper to handle image files from the system
   const handleImageFileUpload = (idx: number) => {
@@ -113,18 +121,28 @@ export default function ProductForm({ product }: Props) {
       const imageList = (form.images || []).map((s) => s.trim()).filter(Boolean);
       const primaryImage = imageList[0] || form.image.trim() || undefined;
 
+      const validSizes = (form.sizes || [])
+        .filter((s) => s.size.trim())
+        .map((s) => ({
+          size: s.size.trim(),
+          price: Number(s.price),
+          mrp: s.mrp ? Number(s.mrp) : Number(s.price),
+          stock: s.stock !== undefined ? Number(s.stock) : Number(form.stock),
+        }));
+
       const payload = {
         name: form.name.trim(),
         category_id: Number(form.category_id),
         category_name: selectedCat?.name || form.category_name || "General",
-        price: Number(form.price),
-        mrp: Number(form.mrp || form.price),
+        price: validSizes.length > 0 ? validSizes[0].price : Number(form.price),
+        mrp: validSizes.length > 0 ? (validSizes[0].mrp || validSizes[0].price) : Number(form.mrp || form.price),
         stock: Number(form.stock),
         image: primaryImage,
         images: imageList.length > 0 ? imageList : primaryImage ? [primaryImage] : [],
         description: form.description.trim() || undefined,
         featured: Boolean(form.featured),
 
+        sizes: validSizes,
         benefits: form.benefits.trim() || undefined,
         howToUse: form.howToUse.trim() || undefined,
         ingredients: form.ingredients.trim() || undefined,
@@ -262,7 +280,7 @@ export default function ProductForm({ product }: Props) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>Selling Price (₹) *</label>
+                <label className={labelClass}>Default / Base Selling Price (₹) *</label>
                 <input
                   type="number"
                   min="0"
@@ -274,7 +292,7 @@ export default function ProductForm({ product }: Props) {
                 />
               </div>
               <div>
-                <label className={labelClass}>Original MRP (₹)</label>
+                <label className={labelClass}>Default / Base MRP (₹)</label>
                 <input
                   type="number"
                   min="0"
@@ -284,6 +302,112 @@ export default function ProductForm({ product }: Props) {
                   className={inputClass}
                 />
               </div>
+            </div>
+
+            {/* Sizes & Separate Prices Section */}
+            <div className="rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[#052E1D]">Product Sizes & Separate Prices</h3>
+                  <p className="text-xs text-[#5b6b60]">
+                    Add specific sizes/weights (e.g. 100ml, 250ml, 500ml, Small, XL) with their own prices.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [
+                      ...(form.sizes || []),
+                      { size: "", price: form.price || 0, mrp: form.mrp || form.price || 0, stock: form.stock || 25 },
+                    ];
+                    set("sizes", next);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#07552F] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#052E1D] transition cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Size
+                </button>
+              </div>
+
+              {form.sizes && form.sizes.length > 0 ? (
+                <div className="space-y-2.5 pt-1">
+                  {form.sizes.map((s, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2 rounded-lg border border-[#cfdccf]/70 bg-white p-2.5 shadow-2xs"
+                    >
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-[#5b6b60] block mb-1">
+                          Size / Variant
+                        </label>
+                        <input
+                          placeholder="e.g. 100ml, 500g, M"
+                          value={s.size}
+                          onChange={(e) => {
+                            const updated = [...form.sizes];
+                            updated[idx].size = e.target.value;
+                            set("sizes", updated);
+                          }}
+                          className="w-full rounded-md border border-[#cfdccf] px-2.5 py-1.5 text-xs text-[#052E1D] outline-none focus:border-[#07552F]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-[#5b6b60] block mb-1">
+                          Price (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Selling Price"
+                          value={s.price}
+                          onChange={(e) => {
+                            const updated = [...form.sizes];
+                            updated[idx].price = Number(e.target.value);
+                            set("sizes", updated);
+                          }}
+                          className="w-full rounded-md border border-[#cfdccf] px-2.5 py-1.5 text-xs text-[#052E1D] outline-none focus:border-[#07552F]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-[#5b6b60] block mb-1">
+                          MRP (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Original MRP"
+                          value={s.mrp ?? s.price}
+                          onChange={(e) => {
+                            const updated = [...form.sizes];
+                            updated[idx].mrp = Number(e.target.value);
+                            set("sizes", updated);
+                          }}
+                          className="w-full rounded-md border border-[#cfdccf] px-2.5 py-1.5 text-xs text-[#052E1D] outline-none focus:border-[#07552F]"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = form.sizes.filter((_, i) => i !== idx);
+                          set("sizes", updated);
+                        }}
+                        className="mt-4 rounded-md p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition"
+                        title="Remove size"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-[#cfdccf] p-3 text-center text-xs text-[#5b6b60]">
+                  No custom sizes added. The product will use the base price. Click <strong>&quot;Add Size&quot;</strong> to add sizes with individual prices.
+                </div>
+              )}
             </div>
 
             <div>

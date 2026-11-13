@@ -1,3 +1,10 @@
+export type ProductSizeVariant = {
+  size: string;
+  price: number;
+  mrp?: number;
+  stock?: number;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -10,6 +17,9 @@ export type Product = {
   description: string;
   featured: boolean;
   createdAt: string;
+
+  // Custom Sizes and Prices
+  sizes?: ProductSizeVariant[];
 
   // Rich Product Sections
   benefits?: string;
@@ -27,7 +37,7 @@ export type Order = {
   email: string;
   phone: string;
   address: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; selectedSize?: string }[];
   total: number;
   status: OrderStatus;
   createdAt: string;

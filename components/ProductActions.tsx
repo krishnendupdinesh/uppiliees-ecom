@@ -5,16 +5,28 @@ import { useRouter } from "next/navigation";
 import type { Product } from "@/data/products";
 import { addToCart, getCart, updateCartItemQty, CART_EVENT } from "@/lib/cart";
 import { setBuyNowItem } from "@/lib/buyNow";
+import { formatPrice } from "@/lib/format";
 import CartControl from "./CartControl";
+
+export type ProductSizeVariant = {
+  size: string;
+  price: number;
+  mrp?: number;
+  stock?: number;
+};
 
 export default function ProductActions({
   product,
   href,
   showBuyNow = true,
+  customSizes = [],
+  onSizeChange,
 }: {
   product?: Product;
   href?: string;
   showBuyNow?: boolean;
+  customSizes?: ProductSizeVariant[];
+  onSizeChange?: (sizeVariant: ProductSizeVariant) => void;
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(0);
@@ -28,20 +40,46 @@ export default function ProductActions({
     (product?.slug && product.slug.includes("handloom"));
 
   const colors = isHandloom ? ["Kasavu Gold", "Silver Zari", "Traditional Off-White"] : [];
-  const sizes =
-    product?.category === "Dhotis"
-      ? ["Double (4.0m)", "Single (2.0m)"]
-      : product?.category === "Set Mundu"
-      ? ["Standard (2.0m x 2.8m)", "Double Kasavu"]
-      : product?.category === "Sarees"
-      ? ["Standard with Blouse (6.25m)"]
-      : [];
+  
+  // Custom sizes configured by admin or handloom fallback sizes
+  const hasCustomSizes = customSizes && customSizes.length > 0;
+  const sizes = hasCustomSizes
+    ? customSizes.map((s) => s.size)
+    : product?.category === "Dhotis"
+    ? ["Double (4.0m)", "Single (2.0m)"]
+    : product?.category === "Set Mundu"
+    ? ["Standard (2.0m x 2.8m)", "Double Kasavu"]
+    : product?.category === "Sarees"
+    ? ["Standard with Blouse (6.25m)"]
+    : [];
 
   const [selectedColor, setSelectedColor] = useState<string>(colors[0] || "");
+  const [selectedSizeIndex, setSelectedSizeIndex] = useState<number>(0);
   const [selectedSize, setSelectedSize] = useState<string>(sizes[0] || "");
   const [variantError, setVariantError] = useState("");
 
-  const isOutOfStock = (product as any)?.stock === 0;
+  const currentSizeObj = hasCustomSizes ? customSizes[selectedSizeIndex] : undefined;
+  const currentPrice = currentSizeObj ? currentSizeObj.price : product?.price || 0;
+  const currentMrp = currentSizeObj ? (currentSizeObj.mrp || currentSizeObj.price) : product?.mrp || currentPrice;
+  const isOutOfStock = currentSizeObj?.stock !== undefined ? currentSizeObj.stock === 0 : (product as any)?.stock === 0;
+
+  useEffect(() => {
+    if (sizes.length > 0 && !selectedSize) {
+      setSelectedSize(sizes[0]);
+    }
+    if (hasCustomSizes && customSizes[0]) {
+      onSizeChange?.(customSizes[0]);
+    }
+  }, [sizes.length]);
+
+  const selectSizeVariant = (s: string, index: number) => {
+    setSelectedSize(s);
+    setSelectedSizeIndex(index);
+    setVariantError("");
+    if (hasCustomSizes && customSizes[index]) {
+      onSizeChange?.(customSizes[index]);
+    }
+  };
 
   useEffect(() => {
     if (!product) return;
@@ -72,10 +110,10 @@ export default function ProductActions({
     setVariantError("");
     addToCart(
       {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        originalPrice: product.mrp > product.price ? product.mrp : undefined,
+        id: hasCustomSizes ? `${product.id}-${selectedSize}` : product.id,
+        name: selectedSize ? `${product.name} (${selectedSize})` : product.name,
+        price: currentPrice,
+        originalPrice: currentMrp > currentPrice ? currentMrp : undefined,
         image: (product as any).image || `/products/${product.slug}.jpg`,
         alt: product.name,
         href: href || `/products/${product.slug}`,
@@ -89,7 +127,8 @@ export default function ProductActions({
       setQuantity((q) => Math.max(0, q - 1));
       return;
     }
-    updateCartItemQty(product.id, quantity - 1);
+    const cartItemId = hasCustomSizes ? `${product.id}-${selectedSize}` : product.id;
+    updateCartItemQty(cartItemId, quantity - 1);
   };
 
   const handleBuyNow = () => {
@@ -101,10 +140,10 @@ export default function ProductActions({
     setVariantError("");
 
     setBuyNowItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      originalPrice: product.mrp > product.price ? product.mrp : undefined,
+      id: hasCustomSizes ? `${product.id}-${selectedSize}` : product.id,
+      name: selectedSize ? `${product.name} (${selectedSize})` : product.name,
+      price: currentPrice,
+      originalPrice: currentMrp > currentPrice ? currentMrp : undefined,
       image: (product as any).image || `/products/${product.slug}.jpg`,
       alt: product.name,
       href: href || `/products/${product.slug}`,
@@ -119,8 +158,49 @@ export default function ProductActions({
 
   return (
     <div className="w-full max-w-md space-y-4">
-      {/* Handloom Variant Pickers */}
-      {isHandloom && (
+      {/* Dynamic Size & Price Selection Picker */}
+      {hasCustomSizes ? (
+        <div className="space-y-3 p-4 bg-[#F4F8F1] rounded-xl border border-[#E6EFE3]">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-[#063D27] uppercase tracking-wider">
+              Select Size / Option:
+            </label>
+            <span className="text-xs font-semibold text-[#07552F]">
+              Active: {selectedSize} (₹{currentPrice})
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {customSizes.map((variant, idx) => {
+              const isSelected = idx === selectedSizeIndex;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => selectSizeVariant(variant.size, idx)}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-[#07552F] text-white border-[#07552F] shadow-sm scale-102"
+                      : "bg-white text-[#183629] border-gray-300 hover:border-[#07552F] hover:bg-[#F9FCF7]"
+                  }`}
+                >
+                  <span className="font-bold text-sm">{variant.size}</span>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className={isSelected ? "text-[#C7E900] font-bold" : "text-[#07552F] font-bold"}>
+                      {formatPrice(variant.price)}
+                    </span>
+                    {variant.mrp && variant.mrp > variant.price && (
+                      <span className={`line-through text-[11px] ${isSelected ? "text-white/70" : "text-gray-400"}`}>
+                        {formatPrice(variant.mrp)}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : isHandloom ? (
+        /* Handloom Variant Pickers */
         <div className="space-y-3 p-3.5 bg-[#F4F8F1] rounded-lg border border-[#E6EFE3]">
           {colors.length > 0 && (
             <div>
@@ -136,7 +216,7 @@ export default function ProductActions({
                       setSelectedColor(c);
                       setVariantError("");
                     }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                       selectedColor === c
                         ? "bg-[#07552F] text-white shadow-sm"
                         : "bg-white text-[#183629] border border-gray-300 hover:border-[#07552F]"
@@ -155,15 +235,12 @@ export default function ProductActions({
                 Select Length / Size:
               </label>
               <div className="flex flex-wrap gap-2">
-                {sizes.map((s) => (
+                {sizes.map((s, idx) => (
                   <button
                     key={s}
                     type="button"
-                    onClick={() => {
-                      setSelectedSize(s);
-                      setVariantError("");
-                    }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    onClick={() => selectSizeVariant(s, idx)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                       selectedSize === s
                         ? "bg-[#07552F] text-white shadow-sm"
                         : "bg-white text-[#183629] border border-gray-300 hover:border-[#07552F]"
@@ -180,7 +257,7 @@ export default function ProductActions({
             <p className="text-xs font-semibold text-[#B3261E]">{variantError}</p>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* Quantity Selector on Product Page */}
       <div className="flex items-center gap-3">
@@ -189,7 +266,7 @@ export default function ProductActions({
           <button
             type="button"
             onClick={() => setSelectedQty((q) => Math.max(1, q - 1))}
-            className="px-3 py-1.5 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition"
+            className="px-3 py-1.5 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition cursor-pointer"
             aria-label="Decrease quantity"
           >
             -
@@ -200,7 +277,7 @@ export default function ProductActions({
           <button
             type="button"
             onClick={() => setSelectedQty((q) => Math.min(10, q + 1))}
-            className="px-3 py-1.5 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition"
+            className="px-3 py-1.5 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition cursor-pointer"
             aria-label="Increase quantity"
           >
             +
@@ -223,7 +300,7 @@ export default function ProductActions({
               type="button"
               onClick={handleAdd}
               disabled={isOutOfStock}
-              className="w-full inline-flex h-12 items-center justify-center gap-2 rounded-md border-2 border-[#07552F] bg-white px-4 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full inline-flex h-12 items-center justify-center gap-2 rounded-md border-2 border-[#07552F] bg-white px-4 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Add to Cart
             </button>
@@ -236,7 +313,7 @@ export default function ProductActions({
             type="button"
             onClick={handleBuyNow}
             disabled={isOutOfStock}
-            className="w-full sm:flex-1 inline-flex h-12 items-center justify-center rounded-md bg-[#07552F] px-4 text-sm font-bold text-white shadow-md hover:bg-[#063D27] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:flex-1 inline-flex h-12 items-center justify-center rounded-md bg-[#07552F] px-4 text-sm font-bold text-white shadow-md hover:bg-[#063D27] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isOutOfStock ? "Out of Stock" : "Buy Now"}
           </button>
@@ -249,7 +326,7 @@ export default function ProductActions({
           type="button"
           onClick={handleAdd}
           disabled={isOutOfStock}
-          className="flex-1 inline-flex h-11 items-center justify-center rounded-md border-2 border-[#07552F] bg-white px-2 text-xs font-bold text-[#07552F] active:bg-[#F4F8F1] disabled:opacity-50"
+          className="flex-1 inline-flex h-11 items-center justify-center rounded-md border-2 border-[#07552F] bg-white px-2 text-xs font-bold text-[#07552F] active:bg-[#F4F8F1] disabled:opacity-50 cursor-pointer"
         >
           {quantity > 0 ? `In Bag (${quantity}) +` : "Add to Cart"}
         </button>
@@ -259,7 +336,7 @@ export default function ProductActions({
             type="button"
             onClick={handleBuyNow}
             disabled={isOutOfStock}
-            className="flex-1 inline-flex h-11 items-center justify-center rounded-md bg-[#07552F] px-2 text-xs font-bold text-white shadow-md active:bg-[#063D27] disabled:opacity-50"
+            className="flex-1 inline-flex h-11 items-center justify-center rounded-md bg-[#07552F] px-2 text-xs font-bold text-white shadow-md active:bg-[#063D27] disabled:opacity-50 cursor-pointer"
           >
             {isOutOfStock ? "Out of Stock" : "Buy Now"}
           </button>

@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       images: body.images,
       description: body.description,
       featured: body.featured,
+      sizes: body.sizes,
       benefits: body.benefits,
       howToUse: body.howToUse,
       ingredients: body.ingredients,

@@ -650,6 +650,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (customDetails?.images && Array.isArray(customDetails.images)) {
     (product as any).images = customDetails.images;
   }
+  const customSizes = customDetails?.sizes && Array.isArray(customDetails.sizes) ? customDetails.sizes : [];
 
   return (
     <div className="min-h-screen bg-white text-gray-900 pb-20 sm:pb-8">
@@ -755,6 +756,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                 product={product}
                 href={productHref(collection, product)}
                 showBuyNow={true}
+                customSizes={customSizes}
               />
             </div>
 
