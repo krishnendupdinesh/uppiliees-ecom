@@ -10,7 +10,7 @@ export default function DeleteProductButton({ id, name }: { id: string; name: st
   async function remove() {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     try {
-      await api(`/products/${id}`, { method: "DELETE" });
+      await api(`/api/products/${id}`, { method: "DELETE" });
       router.refresh();
     } catch (err: any) {
       alert(err.message || "Failed to delete product");

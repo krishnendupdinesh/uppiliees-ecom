@@ -37,22 +37,36 @@ export async function getProducts(): Promise<Product[]> {
     // Backend API not reachable; fall through
   }
 
-  // Fallback to static catalog
+  // Static catalog + custom products
   try {
     const { collections } = await import("@/data/products");
-    const allProducts = collections.flatMap((c) => c.products);
-    return allProducts.map((p) => ({
-      id: String(p.id),
-      name: p.name,
-      category: p.category || "General",
-      price: p.price,
-      mrp: p.mrp || p.price,
-      stock: 25,
-      image: `/products/${p.slug}.jpg`,
-      description: p.description || "",
-      featured: true,
-      createdAt: new Date().toISOString(),
-    }));
+    const { getCustomProducts } = await import("./productsStore");
+    const custom = getCustomProducts();
+
+    const staticList = collections.flatMap((c) =>
+      c.products.map((p) => ({
+        id: `${c.slug}-${p.id}`,
+        name: p.name,
+        category: p.category || c.title,
+        price: p.price,
+        mrp: p.mrp || p.price,
+        stock: 25,
+        image: `/products/${p.slug}.jpg`,
+        description: p.description || "",
+        featured: true,
+        createdAt: new Date().toISOString(),
+      }))
+    );
+
+    // Merge: custom items override static items if matching id, or appear at top
+    const combined = [...custom];
+    for (const item of staticList) {
+      if (!combined.some((c) => c.id === item.id)) {
+        combined.push(item);
+      }
+    }
+
+    return combined;
   } catch {
     return [];
   }
