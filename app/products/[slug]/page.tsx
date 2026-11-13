@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import ProductActions from "@/components/ProductActions";
 import ProductCard from "@/components/ProductCard";
 import ProductImage from "@/components/ProductImage";
+import ProductGallery from "@/components/ProductGallery";
 import ProductTabs, { type ProductTab } from "@/components/ProductTabs";
 import WishlistButton from "@/components/WishlistButton";
 
@@ -645,6 +646,11 @@ export default async function ProductPage({ params }: { params: Params }) {
     },
   ];
 
+  // Merge multiple images from custom details if available
+  if (customDetails?.images && Array.isArray(customDetails.images)) {
+    (product as any).images = customDetails.images;
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900 pb-20 sm:pb-8">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -663,35 +669,13 @@ export default async function ProductPage({ params }: { params: Params }) {
 
         {/* Main Product */}
         <section className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-          {/* Image */}
+          {/* Gallery with Small Side Images & Big Preview */}
           <div className="relative h-fit">
-            <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-              <ProductImage product={product} />
-
-              {discount > 0 && (
-                <span className="absolute top-4 left-4 bg-[#C7E900] text-[#063D27] font-bold text-sm px-3 py-2 rounded">
-                  {discount}% OFF
-                </span>
-              )}
-
-              <div className="absolute top-4 right-4 z-10">
-                <WishlistButton
-                  item={{
-                    id: product.id,
-                    name: product.name,
-                    description: product.description,
-                    price: product.price,
-                    originalPrice:
-                      product.mrp > product.price ? product.mrp : undefined,
-                    image:
-                      (product as any).image || `/products/${product.slug}.jpg`,
-                    alt: product.name,
-                    href: productHref(collection, product),
-                  }}
-                  size={24}
-                />
-              </div>
-            </div>
+            <ProductGallery
+              product={product}
+              discount={discount}
+              wishlistHref={productHref(collection, product)}
+            />
           </div>
 
           {/* Product Information */}

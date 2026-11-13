@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       mrp: body.mrp,
       stock: body.stock,
       image: body.image,
+      images: body.images,
       description: body.description,
       featured: body.featured,
       benefits: body.benefits,

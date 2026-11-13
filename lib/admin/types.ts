@@ -6,6 +6,7 @@ export type Product = {
   mrp: number;
   stock: number;
   image: string;
+  images?: string[];
   description: string;
   featured: boolean;
   createdAt: string;

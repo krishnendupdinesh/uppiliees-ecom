@@ -33,6 +33,7 @@ export default function ProductForm({ product }: Props) {
     mrp: product?.mrp ?? 0,
     stock: product?.stock ?? 25,
     image: product?.image ?? "",
+    images: (product?.images && product.images.length > 0 ? product.images : [product?.image ?? ""]).slice(0, 4),
     description: product?.description ?? "",
     featured: product?.featured ?? false,
 
@@ -61,7 +62,7 @@ export default function ProductForm({ product }: Props) {
       .catch(() => {});
   }, [product]);
 
-  const set = (k: string, v: string | number | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: string | number | boolean | string[]) => setForm((f) => ({ ...f, [k]: v }));
 
   // Helper to handle text or markdown file uploads into a text field
   const handleFileUpload = (field: "description" | "benefits" | "howToUse" | "ingredients" | "returnPolicy") => {
@@ -90,6 +91,9 @@ export default function ProductForm({ product }: Props) {
 
     try {
       const selectedCat = categories.find((c) => c.id === Number(form.category_id));
+      const imageList = (form.images || []).map((s) => s.trim()).filter(Boolean);
+      const primaryImage = imageList[0] || form.image.trim() || undefined;
+
       const payload = {
         name: form.name.trim(),
         category_id: Number(form.category_id),
@@ -97,7 +101,8 @@ export default function ProductForm({ product }: Props) {
         price: Number(form.price),
         mrp: Number(form.mrp || form.price),
         stock: Number(form.stock),
-        image: form.image.trim() || undefined,
+        image: primaryImage,
+        images: imageList.length > 0 ? imageList : primaryImage ? [primaryImage] : [],
         description: form.description.trim() || undefined,
         featured: Boolean(form.featured),
 
@@ -404,36 +409,70 @@ export default function ProductForm({ product }: Props) {
 
         {/* Right Column: Visuals & Badges */}
         <div className="space-y-5">
-          {/* Image Card & Live Preview */}
+          {/* 4 Photos Setup & Live Previews */}
           <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs space-y-4">
-            <label className={labelClass}>Product Image</label>
+            <div className="flex items-center justify-between border-b border-[#F0F5EE] pb-2">
+              <label className={labelClass}>Product Photos (Up to 4)</label>
+              <span className="text-[11px] font-semibold text-[#07552F]">
+                4 Angles / Views
+              </span>
+            </div>
 
+            {/* Main Primary Image Preview */}
             <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F5F8F4] border border-[#E6EFE3] flex items-center justify-center">
-              {form.image ? (
-                <Image
-                  src={form.image}
+              {form.images[0] || form.image ? (
+                <img
+                  src={form.images[0] || form.image}
                   alt="Preview"
-                  fill
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center text-[#8BA894] p-4 text-center">
                   <Package className="h-10 w-10 mb-2 stroke-1" />
-                  <span className="text-xs">No image provided</span>
+                  <span className="text-xs">No primary photo set</span>
                 </div>
               )}
             </div>
 
-            <div>
-              <label className="text-xs text-[#5b6b60] mb-1 block">Image URL or Local Path</label>
-              <input
-                value={form.image}
-                onChange={(e) => set("image", e.target.value)}
-                placeholder="/products/sample.jpg"
-                className={inputClass}
-              />
-              <p className="mt-1 text-[11px] text-[#8BA894]">
-                Accepts local paths (e.g. <code>/products/...jpg</code>) or remote web URLs.
+            {/* Inputs for 4 Photo URLs or Local Paths */}
+            <div className="space-y-3">
+              {[0, 1, 2, 3].map((idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#052E1D]">
+                      Photo #{idx + 1} {idx === 0 && "(Cover / Main)"}
+                    </span>
+                    {form.images[idx] && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...form.images];
+                          updated[idx] = "";
+                          set("images", updated);
+                          if (idx === 0) set("image", updated[1] || "");
+                        }}
+                        className="text-[11px] text-red-500 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    value={form.images[idx] || ""}
+                    onChange={(e) => {
+                      const updated = [...(form.images || [])];
+                      updated[idx] = e.target.value;
+                      set("images", updated);
+                      if (idx === 0) set("image", e.target.value);
+                    }}
+                    placeholder={`e.g. /products/photo-${idx + 1}.jpg or https://...`}
+                    className={inputClass}
+                  />
+                </div>
+              ))}
+
+              <p className="pt-1 text-[11px] text-[#8BA894]">
+                Accepts local paths (<code>/products/...jpg</code>) or direct image web URLs. In store product cards, these photos will automatically cycle, and on the dedicated product page visitors can click side thumbnails to preview in big.
               </p>
             </div>
           </div>
