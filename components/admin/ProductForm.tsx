@@ -64,7 +64,26 @@ export default function ProductForm({ product }: Props) {
 
   const set = (k: string, v: string | number | boolean | string[]) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Helper to handle text or markdown file uploads into a text field
+  // Helper to handle image files from the system
+  const handleImageFileUpload = (idx: number) => {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (typeof dataUrl === "string") {
+          const updated = [...(form.images || [])];
+          updated[idx] = dataUrl;
+          set("images", updated);
+          if (idx === 0) set("image", dataUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    };
+  };
   const handleFileUpload = (field: "description" | "benefits" | "howToUse" | "ingredients" | "returnPolicy") => {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -270,8 +289,8 @@ export default function ProductForm({ product }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className={labelClass}>Overview / Short Description</label>
-                <label className="inline-flex items-center gap-1 text-xs font-semibold text-[#07552F] cursor-pointer hover:underline">
-                  <Upload className="h-3 w-3" /> Upload .txt / .md
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs transition">
+                  <Upload className="h-3.5 w-3.5" /> Upload File (.txt / .md)
                   <input
                     type="file"
                     accept=".txt,.md,.text"
@@ -434,29 +453,52 @@ export default function ProductForm({ product }: Props) {
               )}
             </div>
 
-            {/* Inputs for 4 Photo URLs or Local Paths */}
-            <div className="space-y-3">
+            {/* Inputs & Upload Buttons for 4 Photos */}
+            <div className="space-y-4">
               {[0, 1, 2, 3].map((idx) => (
-                <div key={idx} className="space-y-1">
+                <div key={idx} className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#052E1D]">
+                    <span className="text-xs font-bold text-[#052E1D]">
                       Photo #{idx + 1} {idx === 0 && "(Cover / Main)"}
                     </span>
-                    {form.images[idx] && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = [...form.images];
-                          updated[idx] = "";
-                          set("images", updated);
-                          if (idx === 0) set("image", updated[1] || "");
-                        }}
-                        className="text-[11px] text-red-500 hover:underline"
-                      >
-                        Clear
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1 rounded-md border border-[#cfdccf] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs transition">
+                        <Upload className="h-3 w-3" /> Choose Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageFileUpload(idx)}
+                          className="hidden"
+                        />
+                      </label>
+                      {form.images[idx] && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...form.images];
+                            updated[idx] = "";
+                            set("images", updated);
+                            if (idx === 0) set("image", updated[1] || "");
+                          }}
+                          className="text-[11px] text-red-500 hover:underline"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Thumbnail snippet if set */}
+                  {form.images[idx] && (
+                    <div className="relative h-12 w-12 rounded-lg border border-[#cfdccf] overflow-hidden bg-white">
+                      <img
+                        src={form.images[idx]}
+                        alt={`Thumb ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+
                   <input
                     value={form.images[idx] || ""}
                     onChange={(e) => {
@@ -465,14 +507,14 @@ export default function ProductForm({ product }: Props) {
                       set("images", updated);
                       if (idx === 0) set("image", e.target.value);
                     }}
-                    placeholder={`e.g. /products/photo-${idx + 1}.jpg or https://...`}
+                    placeholder={`Image URL or path (e.g. /products/...jpg)`}
                     className={inputClass}
                   />
                 </div>
               ))}
 
               <p className="pt-1 text-[11px] text-[#8BA894]">
-                Accepts local paths (<code>/products/...jpg</code>) or direct image web URLs. In store product cards, these photos will automatically cycle, and on the dedicated product page visitors can click side thumbnails to preview in big.
+                You can either click <strong>&quot;Choose Image&quot;</strong> to select a photo from your computer, or paste a web URL/local path.
               </p>
             </div>
           </div>
