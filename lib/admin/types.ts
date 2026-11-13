@@ -9,6 +9,12 @@ export type Product = {
   description: string;
   featured: boolean;
   createdAt: string;
+
+  // Rich Product Sections
+  benefits?: string;
+  howToUse?: string;
+  ingredients?: string;
+  returnPolicy?: string;
 };
 
 export type OrderStatus = "pending" | "packed" | "shipped" | "delivered" | "cancelled";

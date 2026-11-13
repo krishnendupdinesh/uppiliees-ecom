@@ -42,6 +42,11 @@ export function saveCustomProduct(p: Partial<Product> & { name: string }): Produ
     description: p.description || "",
     featured: Boolean(p.featured),
     createdAt: p.createdAt || new Date().toISOString(),
+
+    benefits: p.benefits || "",
+    howToUse: p.howToUse || "",
+    ingredients: p.ingredients || "",
+    returnPolicy: p.returnPolicy || "",
   };
 
   if (existingIdx >= 0) {

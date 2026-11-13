@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, Check, Sparkles, AlertCircle, Package } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Sparkles,
+  AlertCircle,
+  Package,
+  Upload,
+  FileText,
+  HelpCircle,
+} from "lucide-react";
 import type { Product } from "@/lib/admin/types";
 import { api } from "@/lib/api";
 
@@ -26,6 +35,12 @@ export default function ProductForm({ product }: Props) {
     image: product?.image ?? "",
     description: product?.description ?? "",
     featured: product?.featured ?? false,
+
+    // Rich descriptive sections
+    benefits: product?.benefits ?? "",
+    howToUse: product?.howToUse ?? "",
+    ingredients: product?.ingredients ?? "",
+    returnPolicy: product?.returnPolicy ?? "",
   });
 
   useEffect(() => {
@@ -48,6 +63,25 @@ export default function ProductForm({ product }: Props) {
 
   const set = (k: string, v: string | number | boolean) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Helper to handle text or markdown file uploads into a text field
+  const handleFileUpload = (field: "description" | "benefits" | "howToUse" | "ingredients" | "returnPolicy") => {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        if (typeof text === "string") {
+          set(field, text);
+        }
+      };
+      reader.readAsText(file);
+      // Reset input value so re-uploading the same file triggers change
+      e.target.value = "";
+    };
+  };
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -66,6 +100,11 @@ export default function ProductForm({ product }: Props) {
         image: form.image.trim() || undefined,
         description: form.description.trim() || undefined,
         featured: Boolean(form.featured),
+
+        benefits: form.benefits.trim() || undefined,
+        howToUse: form.howToUse.trim() || undefined,
+        ingredients: form.ingredients.trim() || undefined,
+        returnPolicy: form.returnPolicy.trim() || undefined,
       };
 
       if (product) {
@@ -94,11 +133,11 @@ export default function ProductForm({ product }: Props) {
 
   const inputClass =
     "w-full rounded-xl border border-[#cfdccf]/80 bg-white px-4 py-2.5 text-sm text-[#052E1D] outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/20";
-  const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#052E1D]";
+  const labelClass = "block text-xs font-semibold uppercase tracking-wider text-[#052E1D]";
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      {/* Top action header for convenience */}
+      {/* Top action header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
@@ -143,98 +182,232 @@ export default function ProductForm({ product }: Props) {
         </div>
       )}
 
-      {/* Main Form Layout */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Left Column: Essential Details */}
-        <div className="space-y-5 rounded-2xl border border-[#E6EFE3] bg-white p-5 sm:p-7 shadow-xs">
-          <div>
-            <label className={labelClass}>Product Title *</label>
-            <input
-              required
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="e.g. Traditional Kerala Handloom Saree"
-              className={inputClass}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Category *</label>
-              <select
-                value={form.category_id}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  const found = categories.find((c) => c.id === id);
-                  setForm((f) => ({ ...f, category_id: id, category_name: found?.name || "" }));
-                }}
-                className={inputClass}
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {/* Main Layout */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_330px]">
+        {/* Left Column: Essential & Detailed Specifications */}
+        <div className="space-y-6">
+          {/* General Information Card */}
+          <div className="space-y-5 rounded-2xl border border-[#E6EFE3] bg-white p-5 sm:p-7 shadow-xs">
+            <h2 className="text-base font-bold text-[#052E1D] border-b border-[#F0F5EE] pb-3">
+              Basic Product Details
+            </h2>
 
             <div>
-              <label className={labelClass}>Available Stock Units *</label>
+              <label className={labelClass}>Product Title *</label>
               <input
-                type="number"
-                min="0"
                 required
-                value={form.stock}
-                onChange={(e) => set("stock", Number(e.target.value))}
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                placeholder="e.g. Traditional Kerala Handloom Saree"
+                className={inputClass}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Category *</label>
+                <select
+                  value={form.category_id}
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    const found = categories.find((c) => c.id === id);
+                    setForm((f) => ({ ...f, category_id: id, category_name: found?.name || "" }));
+                  }}
+                  className={inputClass}
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelClass}>Available Stock Units *</label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={form.stock}
+                  onChange={(e) => set("stock", Number(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Selling Price (₹) *</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={form.price}
+                  onChange={(e) => set("price", Number(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Original MRP (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.mrp}
+                  onChange={(e) => set("mrp", Number(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelClass}>Overview / Short Description</label>
+                <label className="inline-flex items-center gap-1 text-xs font-semibold text-[#07552F] cursor-pointer hover:underline">
+                  <Upload className="h-3 w-3" /> Upload .txt / .md
+                  <input
+                    type="file"
+                    accept=".txt,.md,.text"
+                    onChange={handleFileUpload("description")}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Brief summary of the product..."
                 className={inputClass}
               />
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Selling Price (₹) *</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                value={form.price}
-                onChange={(e) => set("price", Number(e.target.value))}
-                className={inputClass}
-              />
+          {/* Rich Content Tabs (Benefits, How to Use, Ingredients, Return Policy) */}
+          <div className="space-y-6 rounded-2xl border border-[#E6EFE3] bg-white p-5 sm:p-7 shadow-xs">
+            <div className="border-b border-[#F0F5EE] pb-3">
+              <h2 className="text-base font-bold text-[#052E1D]">
+                Product Page Information Tabs
+              </h2>
+              <p className="mt-1 text-xs text-[#5b6b60]">
+                Enter text directly or click &quot;Upload file&quot; to import from any <code>.txt</code> or <code>.md</code> document. These sections will show up on the live product detail page.
+              </p>
             </div>
-            <div>
-              <label className={labelClass}>Original MRP (₹)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.mrp}
-                onChange={(e) => set("mrp", Number(e.target.value))}
-                className={inputClass}
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className={labelClass}>Product Description</label>
-            <textarea
-              rows={4}
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Describe the material, benefits, or traditional craftsmanship..."
-              className={inputClass}
-            />
+            {/* 1. Benefits */}
+            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">1</span>
+                  Benefits
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <input
+                    type="file"
+                    accept=".txt,.md,.text"
+                    onChange={handleFileUpload("benefits")}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <textarea
+                rows={3}
+                value={form.benefits}
+                onChange={(e) => set("benefits", e.target.value)}
+                placeholder="Enter each benefit on a new line (e.g. Relieves joint pain, 100% Herbal...)"
+                className={inputClass}
+              />
+            </div>
+
+            {/* 2. How to Use */}
+            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">2</span>
+                  How to Use
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <input
+                    type="file"
+                    accept=".txt,.md,.text"
+                    onChange={handleFileUpload("howToUse")}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <textarea
+                rows={3}
+                value={form.howToUse}
+                onChange={(e) => set("howToUse", e.target.value)}
+                placeholder="Instructions on dosage, application, or directions of use..."
+                className={inputClass}
+              />
+            </div>
+
+            {/* 3. Ingredients / Care */}
+            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">3</span>
+                  Ingredients / Material
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <input
+                    type="file"
+                    accept=".txt,.md,.text"
+                    onChange={handleFileUpload("ingredients")}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <textarea
+                rows={3}
+                value={form.ingredients}
+                onChange={(e) => set("ingredients", e.target.value)}
+                placeholder="List ingredients or herbal composition, fabric details, etc..."
+                className={inputClass}
+              />
+            </div>
+
+            {/* 4. Return Policy */}
+            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">4</span>
+                  Return Policy
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <input
+                    type="file"
+                    accept=".txt,.md,.text"
+                    onChange={handleFileUpload("returnPolicy")}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <textarea
+                rows={3}
+                value={form.returnPolicy}
+                onChange={(e) => set("returnPolicy", e.target.value)}
+                placeholder="Custom return, replacement, or warranty policy for this product..."
+                className={inputClass}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Image & Settings */}
+        {/* Right Column: Visuals & Badges */}
         <div className="space-y-5">
           {/* Image Card & Live Preview */}
           <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs space-y-4">
             <label className={labelClass}>Product Image</label>
-            
+
             <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F5F8F4] border border-[#E6EFE3] flex items-center justify-center">
               {form.image ? (
                 <Image
@@ -265,10 +438,10 @@ export default function ProductForm({ product }: Props) {
             </div>
           </div>
 
-          {/* Visibility & Feature */}
+          {/* Visibility & Feature Badge */}
           <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs">
-            <label className={labelClass}>Badges & Visibility</label>
-            <label className="mt-2 flex items-start gap-3 cursor-pointer">
+            <label className={labelClass}>Visibility & Highlighting</label>
+            <label className="mt-3 flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.featured}
@@ -280,7 +453,7 @@ export default function ProductForm({ product }: Props) {
                   <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Featured Product
                 </span>
                 <p className="text-xs text-[#5b6b60] mt-0.5">
-                  Highlight this product on the homepage bestsellers and collection showcases.
+                  Promote on homepage showcase and category top spots.
                 </p>
               </div>
             </label>

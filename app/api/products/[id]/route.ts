@@ -26,6 +26,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       image: body.image,
       description: body.description,
       featured: body.featured,
+      benefits: body.benefits,
+      howToUse: body.howToUse,
+      ingredients: body.ingredients,
+      returnPolicy: body.returnPolicy,
     });
 
     return NextResponse.json(saved);

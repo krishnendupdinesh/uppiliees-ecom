@@ -523,6 +523,16 @@ export default async function ProductPage({ params }: { params: Params }) {
     // fall back to static data
   }
 
+  // Look for custom products store info if available
+  let customDetails: any = null;
+  try {
+    const { getCustomProducts } = await import("@/lib/admin/productsStore");
+    const customList = getCustomProducts();
+    customDetails = customList.find(
+      (cp) => cp.id === slug || cp.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug
+    );
+  } catch {}
+
   if (!product || !collection) {
     const found = findProductBySlug(slug);
     if (!found) notFound();
@@ -570,7 +580,23 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   const related = others.slice(0, 8);
 
-  const benefitsList = info.benefits?.length
+  const customBenefits = customDetails?.benefits?.trim()
+    ? customDetails.benefits.split("\n").map((s: string) => s.trim()).filter(Boolean)
+    : null;
+
+  const customHowToUse = customDetails?.howToUse?.trim()
+    ? customDetails.howToUse.split("\n").map((s: string) => s.trim()).filter(Boolean)
+    : null;
+
+  const customIngredients = customDetails?.ingredients?.trim()
+    ? customDetails.ingredients.split("\n").map((s: string) => s.trim()).filter(Boolean)
+    : null;
+
+  const customReturnPolicy = customDetails?.returnPolicy?.trim()
+    ? customDetails.returnPolicy.split("\n").map((s: string) => s.trim()).filter(Boolean)
+    : null;
+
+  const benefitsList = customBenefits || (info.benefits?.length
     ? info.benefits
     : info.highlights?.length
       ? info.highlights
@@ -578,7 +604,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           `Authentic and pure traditional quality from UPPILIEES.`,
           `Carefully crafted following traditional Kerala methods.`,
           `No harmful chemicals or artificial preservatives.`
-        ];
+        ]);
 
   const tabs: ProductTab[] = [
     {
@@ -589,31 +615,31 @@ export default async function ProductPage({ params }: { params: Params }) {
     {
       id: "how",
       label: "How to Use",
-      paragraphs: info.usage?.length
+      paragraphs: customHowToUse || (info.usage?.length
         ? info.usage
-        : ["Please refer to the product packaging for directions of use."],
+        : ["Please refer to the product packaging for directions of use."]),
     },
     group === "handloom"
       ? {
           id: "care",
           label: "Care",
-          paragraphs: info.careInstructions?.length
+          paragraphs: customIngredients || (info.careInstructions?.length
             ? info.careInstructions
-            : ["Please refer to the fabric and product care instructions."],
+            : ["Please refer to the fabric and product care instructions."]),
         }
       : {
           id: "ingredients",
           label: "Ingredients",
-          paragraphs: info.ingredients?.length
+          paragraphs: customIngredients || (info.ingredients?.length
             ? [info.ingredients.join(", ")]
             : [
                 "Please refer to the product packaging for verified ingredients and composition.",
-              ],
+              ]),
         },
     {
       id: "returns",
       label: "Return Policy",
-      paragraphs: [
+      paragraphs: customReturnPolicy || [
         "We accept returns and replacements within 7 days of delivery for damaged or defective items. Please contact our support team with order details."
       ],
     },
@@ -721,7 +747,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                   Key Benefits
                 </h3>
                 <ul className="space-y-2">
-                  {benefitsList.map((benefit, i) => (
+                  {benefitsList.map((benefit: string, i: number) => (
                     <li key={i} className="flex items-start gap-2.5 text-sm text-[#183629]">
                       <svg
                         className="w-4 h-4 text-[#4D9A18] shrink-0 mt-0.5"
