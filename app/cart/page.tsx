@@ -294,6 +294,7 @@ export default function CartPage() {
   const reload = useCallback(() => setItems(readCart()), []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
     setLoaded(true);
     window.addEventListener(CART_EVENT, reload);
@@ -306,13 +307,13 @@ export default function CartPage() {
 
   const setQty = (id: CartItem["id"], qty: number) => {
     const clamped = Math.min(Math.max(qty, 1), MAX_QTY);
-    const next = items.map((i) => (i.id === id ? { ...i, qty: clamped } : i));
+    const next = items.map((i: CartItem) => (i.id === id ? { ...i, qty: clamped } : i));
     setItems(next);
     writeCart(next);
   };
 
   const remove = (id: CartItem["id"]) => {
-    const next = items.filter((i) => i.id !== id);
+    const next = items.filter((i: CartItem) => i.id !== id);
     setItems(next);
     writeCart(next);
   };
@@ -322,10 +323,10 @@ export default function CartPage() {
     writeCart([]);
   };
 
-  const count = items.reduce((n, i) => n + i.qty, 0);
-  const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
+  const count = items.reduce((n: number, i: CartItem) => n + i.qty, 0);
+  const subtotal = items.reduce((n: number, i: CartItem) => n + i.price * i.qty, 0);
   const savings = items.reduce(
-    (n, i) =>
+    (n: number, i: CartItem) =>
       i.originalPrice !== undefined && i.originalPrice > i.price
         ? n + (i.originalPrice - i.price) * i.qty
         : n,
@@ -381,7 +382,7 @@ export default function CartPage() {
               {/* Items */}
               <div>
                 <ul className="space-y-3 md:space-y-4">
-                  {items.map((item) => (
+                  {items.map((item: CartItem) => (
                     <CartRow key={item.id} item={item} onQty={setQty} onRemove={remove} />
                   ))}
                 </ul>
