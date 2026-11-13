@@ -20,7 +20,7 @@ export interface StoredOrder {
   address: string;
   items: { name: string; qty: number; price: number }[];
   total: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "packed" | "processing" | "shipped" | "delivered" | "cancelled";
   createdAt: string;
   isGuest?: boolean;
 }

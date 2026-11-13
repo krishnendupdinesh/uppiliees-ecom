@@ -1035,6 +1035,7 @@ function Dashboard({
 const PREVIEW_USER: User = { name: "Your Name", email: "you@example.com", phone: "", addresses: [] };
 
 export default function AccountPage() {
+  const router = useRouter();
   // undefined = still checking, null = signed out
   const [user, setUser] = useState<User | null | undefined>(undefined);
 

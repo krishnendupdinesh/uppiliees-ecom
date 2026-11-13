@@ -39,15 +39,16 @@ export async function getProducts(): Promise<Product[]> {
 
   // Fallback to static catalog
   try {
-    const { PRODUCTS } = await import("@/data/products");
-    return PRODUCTS.map((p) => ({
+    const { collections } = await import("@/data/products");
+    const allProducts = collections.flatMap((c) => c.products);
+    return allProducts.map((p) => ({
       id: String(p.id),
       name: p.name,
       category: p.category || "General",
       price: p.price,
-      mrp: p.originalPrice || p.price,
+      mrp: p.mrp || p.price,
       stock: 25,
-      image: p.image || "",
+      image: `/products/${p.slug}.jpg`,
       description: p.description || "",
       featured: true,
       createdAt: new Date().toISOString(),
