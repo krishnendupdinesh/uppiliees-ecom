@@ -1,0 +1,11 @@
+[
+  {
+    "id": "usr_mwehpv2ar2hr",
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "phone": "9876543210",
+    "passwordHash": "4d43ff78471c73282530cec8929b1a92:742b24d8fc76db65d1a8b0d3240222fc5952f37f8bb7cccd56917db17ce5c5ef9fb26ab0d28d06de06945db608d74f9383aabd13c3b374fd29746280afe3dc69",
+    "role": "customer",
+    "createdAt": "2026-11-13T04:42:11.458Z"
+  }
+]

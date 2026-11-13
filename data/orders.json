@@ -1,0 +1,20 @@
+[
+  {
+    "id": "UPP-151208",
+    "customerName": "Guest Visitor",
+    "email": "guest@uppiliees.com",
+    "phone": "9988776655",
+    "address": "123 Coastal Road, Kochi, Kerala 682001",
+    "items": [
+      {
+        "name": "Ashwagandha Powder",
+        "qty": 2,
+        "price": 199
+      }
+    ],
+    "total": 398,
+    "status": "pending",
+    "createdAt": "2026-11-13T04:45:51.208Z",
+    "isGuest": true
+  }
+]

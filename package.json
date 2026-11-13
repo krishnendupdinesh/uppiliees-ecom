@@ -1,0 +1,35 @@
+{
+  "name": "uppiliees",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint",
+    "check-links": "node scripts/check-links.js"
+  },
+  "dependencies": {
+    "@next/swc-win32-x64-msvc": "^16.4.5",
+    "@tailwindcss/postcss": "^4.3.5",
+    "framer-motion": "^14.12.0",
+    "jose": "^6.2.17",
+    "lightningcss-win32-x64-msvc": "^1.33.0",
+    "lucide-react": "^1.72.0",
+    "next": "16.4.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@next/swc-wasm-nodejs": "^16.4.6",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "lightningcss-wasm": "^1.33.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
