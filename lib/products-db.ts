@@ -1,5 +1,13 @@
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
+import {
+  handloom,
+  herbalBeauty,
+  traditionalFoods,
+  allProducts,
+  type Collection,
+  type Product,
+} from "@/data/products";
 
 export interface DbProductImage {
   id: number;
@@ -47,6 +55,14 @@ export async function generateUniqueSlug(baseName: string, excludeId?: number): 
   }
 }
 
+// Clean an image URL (strip legacy non-existent /products/*.jpg placeholder paths)
+function cleanImageUrl(rawUrl: unknown): string {
+  if (!rawUrl || typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.startsWith("/products/")) return "";
+  return trimmed;
+}
+
 // Format a database product row and its product_images rows into a unified object
 export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[] = []) {
   const price = safeNumber(row.price, 0);
@@ -54,18 +70,33 @@ export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[]
   const stock = safeNumber(row.stock, 0);
   const inStockFlag = row.in_stock !== undefined ? Boolean(row.in_stock) : true;
   const inStock = inStockFlag && stock > 0;
+  const isActive = row.is_active !== undefined && row.is_active !== null ? Boolean(row.is_active) : true;
+  const displayOrder = safeNumber(row.display_order, 0);
 
-  const sortedImages = [...imageRows].sort((a, b) => a.sort_order - b.sort_order);
-  const imagesFromTable = sortedImages.map((img) => img.image_url).filter(Boolean);
+  // Sort images by sort_order ASC and filter out empty or fake placeholder paths
+  const sortedImages = [...imageRows]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .filter((img) => Boolean(cleanImageUrl(img.image_url)));
+
+  const imagesFromTable = sortedImages.map((img) => cleanImageUrl(img.image_url));
   const publicIdsFromTable = sortedImages.map((img) => img.public_id || "");
 
-  const defaultImg = row.image_url || `/products/${row.slug}.jpg`;
-  const images = imagesFromTable.length > 0 ? imagesFromTable : [defaultImg];
+  const rowMainImg = cleanImageUrl(row.image_url);
+  const images =
+    imagesFromTable.length > 0
+      ? imagesFromTable
+      : rowMainImg
+      ? [rowMainImg]
+      : [];
   const imagePublicIds =
-    publicIdsFromTable.length > 0 ? publicIdsFromTable : [row.image_public_id || ""];
+    publicIdsFromTable.length > 0
+      ? publicIdsFromTable
+      : rowMainImg
+      ? [row.image_public_id || ""]
+      : [];
 
-  const primaryImage = images[0] || defaultImg;
-  const primaryPublicId = imagePublicIds[0] || row.image_public_id || "";
+  const primaryImage = images[0] || "";
+  const primaryPublicId = imagePublicIds[0] || "";
 
   let sizes: { size: string; price: number; mrp?: number; stock?: number }[] = [];
   if (row.sizes_json) {
@@ -102,6 +133,9 @@ export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[]
     mrp,
     stock,
     in_stock: inStock,
+    is_active: isActive,
+    display_order: displayOrder,
+    tags: row.tags || "",
     image_url: primaryImage,
     image: primaryImage,
     image_public_id: primaryPublicId,
@@ -121,15 +155,17 @@ export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[]
   };
 }
 
-// Fetch all products from TiDB with optional category, featured, or search filters
+// Fetch all products from TiDB with optional category, featured, search, or includeInactive filters
 export async function fetchProductsFromDb(options?: {
   category?: string;
   featured?: boolean;
   search?: string;
+  includeInactive?: boolean;
 }) {
   const category = (options?.category || "").trim().toLowerCase();
   const search = (options?.search || "").trim().toLowerCase();
   const featured = options?.featured;
+  const includeInactive = Boolean(options?.includeInactive);
 
   let sql = `
     SELECT p.*, c.name AS category_name, c.slug AS category_slug
@@ -139,7 +175,14 @@ export async function fetchProductsFromDb(options?: {
   `;
   const params: any[] = [];
 
-  if (category && category !== "all" && category !== "products" && category !== "shop") {
+  if (!includeInactive) {
+    sql += " AND (p.is_active = TRUE OR p.is_active IS NULL)";
+  }
+
+  const isSpecificCategory =
+    Boolean(category) && category !== "all" && category !== "products" && category !== "shop";
+
+  if (isSpecificCategory) {
     if (
       category === "traditional-foods" ||
       category === "traditional-food" ||
@@ -170,7 +213,12 @@ export async function fetchProductsFromDb(options?: {
     params.push(likeTerm, likeTerm, likeTerm);
   }
 
-  sql += " ORDER BY p.id ASC";
+  // Sort by display_order ASC (and category_id ASC when listing all products across categories)
+  if (isSpecificCategory) {
+    sql += " ORDER BY COALESCE(p.display_order, 9999) ASC, p.id ASC";
+  } else {
+    sql += " ORDER BY COALESCE(p.category_id, 99) ASC, COALESCE(p.display_order, 9999) ASC, p.id ASC";
+  }
 
   const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
   if (rows.length === 0) return [];
@@ -203,18 +251,26 @@ export async function fetchProductsFromDb(options?: {
 }
 
 // Fetch a single product by ID or slug from TiDB
-export async function fetchProductByIdOrSlugFromDb(idOrSlug: string) {
+export async function fetchProductByIdOrSlugFromDb(
+  idOrSlug: string,
+  options?: { includeInactive?: boolean }
+) {
   const clean = String(idOrSlug || "").trim();
   if (!clean) return null;
 
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    `SELECT p.*, c.name AS category_name, c.slug AS category_slug
-     FROM products p
-     LEFT JOIN categories c ON p.category_id = c.id
-     WHERE p.slug = ? OR CAST(p.id AS CHAR) = ?
-     LIMIT 1`,
-    [clean, clean]
-  );
+  const includeInactive = Boolean(options?.includeInactive);
+  let sql = `
+    SELECT p.*, c.name AS category_name, c.slug AS category_slug
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE (p.slug = ? OR CAST(p.id AS CHAR) = ?)
+  `;
+  if (!includeInactive) {
+    sql += " AND (p.is_active = TRUE OR p.is_active IS NULL)";
+  }
+  sql += " LIMIT 1";
+
+  const [rows] = await pool.execute<RowDataPacket[]>(sql, [clean, clean]);
 
   if (rows.length === 0) return null;
 
@@ -238,3 +294,52 @@ export async function fetchProductByIdOrSlugFromDb(idOrSlug: string) {
   return formatProductRow(productRow, images);
 }
 
+// Fetch a complete Collection object (title, subtitle, priceRanges, products sorted by display_order) from TiDB
+export async function fetchCollectionFromDb(
+  slug: "herbal-beauty" | "traditional-foods" | "handloom" | "products"
+): Promise<Collection> {
+  const baseCollection =
+    slug === "herbal-beauty"
+      ? herbalBeauty
+      : slug === "traditional-foods"
+      ? traditionalFoods
+      : slug === "handloom"
+      ? handloom
+      : allProducts;
+
+  try {
+    const dbRows = await fetchProductsFromDb({
+      category: slug === "products" ? undefined : slug,
+      includeInactive: false,
+    });
+
+    const mappedProducts: Product[] = dbRows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      category: p.subcategory || p.category_name || "General",
+      price: safeNumber(p.price, 0),
+      mrp: safeNumber(p.mrp, safeNumber(p.price, 0)),
+      description: p.description || undefined,
+      collectionSlug: p.category_slug || (slug === "products" ? "herbal-beauty" : slug),
+      image: p.image_url || "",
+      images: p.images || [],
+      stock: p.stock,
+      in_stock: p.in_stock,
+    }));
+
+    return {
+      slug: baseCollection.slug,
+      title: baseCollection.title,
+      subtitle: baseCollection.subtitle,
+      priceRanges: baseCollection.priceRanges,
+      products: mappedProducts,
+    };
+  } catch (err) {
+    console.error(`Error loading collection "${slug}" from database:`, err);
+    return {
+      ...baseCollection,
+      products: [],
+    };
+  }
+}

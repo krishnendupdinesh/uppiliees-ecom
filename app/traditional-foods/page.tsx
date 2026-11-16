@@ -1,8 +1,11 @@
+import { connection } from "next/server";
 import UppilieesProductListing from "@/components/UppilieesProductListing";
-import { traditionalFoods } from "@/data/products";
+import { fetchCollectionFromDb } from "@/lib/products-db";
 
 export const dynamic = "force-dynamic";
 
-export default function TraditionalFoodPage() {
-  return <UppilieesProductListing collection={traditionalFoods} />;
+export default async function TraditionalFoodPage() {
+  await connection();
+  const collection = await fetchCollectionFromDb("traditional-foods");
+  return <UppilieesProductListing collection={collection} />;
 }

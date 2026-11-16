@@ -3,18 +3,25 @@ import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import cloudinary from "@/lib/cloudinary";
 import { requireAdminUser } from "@/lib/auth";
-import { fetchProductByIdOrSlugFromDb, safeNumber } from "@/lib/products-db";
+import {
+  fetchProductByIdOrSlugFromDb,
+  generateUniqueSlug,
+  safeNumber,
+} from "@/lib/products-db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   await connection();
   try {
     const { id } = await params;
-    const product = await fetchProductByIdOrSlugFromDb(id);
+    const admin = await requireAdminUser(req);
+    const product = await fetchProductByIdOrSlugFromDb(id, {
+      includeInactive: Boolean(admin),
+    });
     if (!product) {
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
     }
@@ -43,7 +50,7 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const existing = await fetchProductByIdOrSlugFromDb(id);
+    const existing = await fetchProductByIdOrSlugFromDb(id, { includeInactive: true });
     if (!existing) {
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
     }
@@ -56,6 +63,11 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    const slug =
+      body.slug && String(body.slug).trim() && String(body.slug).trim() !== existing.slug
+        ? await generateUniqueSlug(String(body.slug).trim(), Number(existing.id))
+        : existing.slug;
 
     const price = body.price !== undefined ? safeNumber(body.price, 0) : existing.price;
     const mrp =
@@ -70,6 +82,12 @@ export async function PUT(
       body.in_stock !== undefined
         ? Boolean(body.in_stock) && stock > 0
         : stock > 0;
+    const isActive =
+      body.is_active !== undefined ? Boolean(body.is_active) : existing.is_active;
+    const displayOrder =
+      body.display_order !== undefined
+        ? Math.max(0, Math.floor(safeNumber(body.display_order, 0)))
+        : existing.display_order;
 
     let categoryId =
       body.category_id !== undefined ? Number(body.category_id) : existing.category_id;
@@ -89,34 +107,47 @@ export async function PUT(
         : existing.subcategory || body.category_name || existing.category_name;
     const description =
       body.description !== undefined ? String(body.description).trim() : existing.description;
+    const tags = body.tags !== undefined ? String(body.tags).trim() : existing.tags;
     const featured =
       body.featured !== undefined ? Boolean(body.featured) : existing.featured;
 
-    // Build updated image list
-    const rawImages: string[] = Array.isArray(body.images)
-      ? body.images.map((s: any) => String(s || "").trim())
-      : [];
-    const rawPublicIds: string[] = Array.isArray(body.imagePublicIds)
-      ? body.imagePublicIds.map((s: any) => String(s || "").trim())
-      : [];
+    // Build updated image list (if body.images was provided, use it; otherwise keep existing)
+    let imageEntries: { url: string; publicId: string | null }[] = [];
+    if (body.images !== undefined) {
+      const rawImages: string[] = Array.isArray(body.images)
+        ? body.images.map((s: any) => String(s || "").trim())
+        : [];
+      const rawPublicIds: string[] = Array.isArray(body.imagePublicIds)
+        ? body.imagePublicIds.map((s: any) => String(s || "").trim())
+        : [];
 
-    const imageEntries: { url: string; publicId: string | null }[] = [];
-    for (let i = 0; i < rawImages.length; i++) {
-      if (rawImages[i]) {
-        imageEntries.push({
-          url: rawImages[i],
-          publicId: rawPublicIds[i] || null,
-        });
+      for (let i = 0; i < rawImages.length; i++) {
+        const url = rawImages[i];
+        if (url && !url.startsWith("/products/")) {
+          imageEntries.push({
+            url,
+            publicId: rawPublicIds[i] || null,
+          });
+        }
       }
-    }
-
-    if (imageEntries.length === 0) {
-      const singleUrl = String(body.image_url || body.image || existing.image_url || "").trim();
+    } else if (body.image_url !== undefined || body.image !== undefined) {
+      const singleUrl = String(body.image_url ?? body.image ?? "").trim();
       const singlePid =
-        String(body.image_public_id || body.publicId || existing.image_public_id || "").trim() ||
-        null;
-      if (singleUrl) {
+        String(body.image_public_id ?? body.publicId ?? "").trim() || null;
+      if (singleUrl && !singleUrl.startsWith("/products/")) {
         imageEntries.push({ url: singleUrl, publicId: singlePid });
+      }
+    } else {
+      // Preserve existing images when PUT only updates status/stock/etc.
+      imageEntries = (existing.product_images || []).map((img: any) => ({
+        url: img.image_url,
+        publicId: img.public_id || null,
+      }));
+      if (imageEntries.length === 0 && existing.image_url) {
+        imageEntries.push({
+          url: existing.image_url,
+          publicId: existing.image_public_id || null,
+        });
       }
     }
 
@@ -140,7 +171,7 @@ export async function PUT(
       }
     }
 
-    const primaryImageUrl = imageEntries[0]?.url || existing.image_url;
+    const primaryImageUrl = imageEntries[0]?.url || null;
     const primaryPublicId = imageEntries[0]?.publicId || null;
 
     const sizesJson =
@@ -163,13 +194,14 @@ export async function PUT(
 
     await pool.execute(
       `UPDATE products SET
-        name = ?, category_id = ?, subcategory = ?, description = ?,
-        price = ?, mrp = ?, stock = ?, in_stock = ?,
+        name = ?, slug = ?, category_id = ?, subcategory = ?, description = ?,
+        price = ?, mrp = ?, stock = ?, in_stock = ?, is_active = ?, display_order = ?, tags = ?,
         image_url = ?, image_public_id = ?, sizes_json = ?,
         benefits = ?, how_to_use = ?, ingredients = ?, return_policy = ?, featured = ?
        WHERE id = ?`,
       [
         name,
+        slug,
         categoryId,
         subcategory,
         description,
@@ -177,6 +209,9 @@ export async function PUT(
         mrp,
         stock,
         inStock,
+        isActive,
+        displayOrder,
+        tags,
         primaryImageUrl,
         primaryPublicId,
         sizesJson,
@@ -189,7 +224,7 @@ export async function PUT(
       ]
     );
 
-    // Replace product_images rows with the updated image list
+    // Replace product_images rows with the updated ordered image list
     await pool.execute("DELETE FROM product_images WHERE product_id = ?", [existing.id]);
     for (let i = 0; i < imageEntries.length; i++) {
       await pool.execute(
@@ -198,7 +233,9 @@ export async function PUT(
       );
     }
 
-    const updated = await fetchProductByIdOrSlugFromDb(String(existing.id));
+    const updated = await fetchProductByIdOrSlugFromDb(String(existing.id), {
+      includeInactive: true,
+    });
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error("PUT /api/products/[id] error:", error);
@@ -224,7 +261,7 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const existing = await fetchProductByIdOrSlugFromDb(id);
+    const existing = await fetchProductByIdOrSlugFromDb(id, { includeInactive: true });
     if (!existing) {
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
     }
@@ -244,7 +281,8 @@ export async function DELETE(
       }
     }
 
-    // 3. Delete product from TiDB (product_images rows cascade automatically)
+    // 3. Delete product_images and product from TiDB
+    await pool.execute("DELETE FROM product_images WHERE product_id = ?", [existing.id]);
     await pool.execute("DELETE FROM products WHERE id = ?", [existing.id]);
 
     return NextResponse.json({

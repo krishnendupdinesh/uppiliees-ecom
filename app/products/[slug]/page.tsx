@@ -5,15 +5,12 @@ import { connection } from "next/server";
 
 import ProductActions from "@/components/ProductActions";
 import ProductCard from "@/components/ProductCard";
-import ProductImage from "@/components/ProductImage";
 import ProductGallery from "@/components/ProductGallery";
 import ProductTabs, { type ProductTab } from "@/components/ProductTabs";
 import ProductReviews from "@/components/ProductReviews";
-import WishlistButton from "@/components/WishlistButton";
 
 import {
   collections,
-  findProductBySlug,
   productHref,
   type Collection,
   type Product,
@@ -32,421 +29,6 @@ type Params = Promise<{ slug: string }>;
 
 type ProductGroup = "wellness" | "food" | "handloom";
 
-type ProductInfo = {
-  overview?: string;
-  ingredients?: string[];
-  highlights?: string[];
-  benefits?: string[];
-  usage?: string[];
-  careInstructions?: string[];
-};
-
-// SEO headings and product categories from the UPPILIEES catalogue.
-const seoProducts: Record<string, { heading: string; group: ProductGroup }> = {
-  "changalam-paranda-pain-relief-oil": {
-    heading: "Changalam Paranda Herbal Pain Relief Oil",
-    group: "wellness",
-  },
-  "babyglow-baby-massage-oil": {
-    heading: "BabyGlow Natural Baby Massage Oil",
-    group: "wellness",
-  },
-  "pulari-herbal-hair-growth-oil": {
-    heading: "PULARI Herbal Hair Growth Oil",
-    group: "wellness",
-  },
-  "glow-plus-fairness-powder": {
-    heading: "Glow Plus Herbal Fairness Powder",
-    group: "wellness",
-  },
-  "glow-plus-skin-brightening-cream": {
-    heading: "Glow Plus Skin Brightening Moisturizing Cream",
-    group: "wellness",
-  },
-  "sankhu-puspam-face-wash": {
-    heading: "Sankhu Puspam Herbal Face Wash",
-    group: "wellness",
-  },
-  "glow-plus-lip-care-cream": {
-    heading: "Glow Plus Lip Care Cream",
-    group: "wellness",
-  },
-  "baby-glow-urukku-velichenna": {
-    heading: "Homemade Baby Glow Virgin Coconut Oil",
-    group: "wellness",
-  },
-  "painoplus-pain-relief-balm": {
-    heading: "PainoPlus Changalam Paranda Pain Relief Balm",
-    group: "wellness",
-  },
-  "stretch-ease-stretch-mark-cream": {
-    heading: "Stretch Ease Stretch Mark Care Cream",
-    group: "wellness",
-  },
-  "ojas-boost-herbal-powder": {
-    heading: "Ojas Boost Herbal Wellness Powder",
-    group: "wellness",
-  },
-  "ashwagandha-powder": {
-    heading: "Natural Ashwagandha Herbal Powder",
-    group: "wellness",
-  },
-  "naikuruna-powder": {
-    heading: "Natural Naikuruna Herbal Powder",
-    group: "wellness",
-  },
-  "kalonji-black-seed-oil": {
-    heading: "Pure Kalonji Black Seed Oil for Hair Care",
-    group: "wellness",
-  },
-  "mozi-out-herbal-mosquito-repellent": {
-    heading: "MOZI OUT Herbal Mosquito Repellent",
-    group: "wellness",
-  },
-
-  "kannan-kaya-powder": {
-    heading: "Traditional Kerala Kannan Kaya Powder",
-    group: "food",
-  },
-  "kannan-kaya-dried-chips": {
-    heading: "Traditional Kannan Kaya Dried Banana Chips",
-    group: "food",
-  },
-  "homemade-banana-powder": {
-    heading: "Homemade Natural Banana Powder",
-    group: "food",
-  },
-  "banana-dried-chips": {
-    heading: "Traditional Kerala Dried Banana Chips",
-    group: "food",
-  },
-  "ragi-powder": {
-    heading: "Natural Ragi Finger Millet Powder",
-    group: "food",
-  },
-  "homemade-sambar-powder": {
-    heading: "Homemade Kerala Style Sambar Powder",
-    group: "food",
-  },
-  "banana-figs": {
-    heading: "Traditional Kerala Banana Figs",
-    group: "food",
-  },
-  "homemade-prawns-pickle": {
-    heading: "Homemade Kerala Style Prawns Pickle",
-    group: "food",
-  },
-  "homemade-pure-cow-ghee": {
-    heading: "Homemade Pure Cow Ghee",
-    group: "food",
-  },
-  "homemade-pork-lard": {
-    heading: "Homemade Pure Pork Lard",
-    group: "food",
-  },
-
-  "kerala-handloom-sarees": {
-    heading: "Traditional Kerala Handloom Sarees",
-    group: "handloom",
-  },
-  "kerala-handloom-set-mundu": {
-    heading: "Traditional Kerala Handloom Set Mundu",
-    group: "handloom",
-  },
-  "kerala-handloom-dhotis": {
-    heading: "Traditional Kerala Handloom Dhotis",
-    group: "handloom",
-  },
-};
-
-const productInformation: Record<string, ProductInfo> = {
-  // Herbal & Beauty
-  "changalam-paranda-pain-relief-oil": {
-    benefits: [
-      "Rapid natural relief from joint, muscle, knee, and back pain.",
-      "Traditional Kerala herbal formula infused with Changalam Paranda (Cissus quadrangularis).",
-      "Improves blood circulation and relieves chronic stiffness and swelling.",
-      "100% natural herbal ingredients with no harsh chemicals or artificial fragrances."
-    ],
-    highlights: ["100% Herbal & Ayurvedic", "Fast-acting relief", "Deep penetrating oil"],
-    usage: ["Take a small amount, gently massage into the affected area for 5-10 minutes, and leave it on or apply mild warmth."]
-  },
-  "babyglow-baby-massage-oil": {
-    benefits: [
-      "Specially formulated with gentle, safe herbs to nourish delicate baby skin.",
-      "Strengthens baby's bones and muscles through soothing daily massage.",
-      "Prevents skin dryness, rashes, and maintains soft, supple baby texture.",
-      "Toxin-free, chemical-free, and dermatologically mild formulation."
-    ],
-    highlights: ["Safe for newborns & toddlers", "Deeply nourishing", "100% pure & gentle"],
-    usage: ["Warm a few drops between your palms and gently massage over the baby's body prior to bath time."]
-  },
-  "pulari-herbal-hair-growth-oil": {
-    benefits: [
-      "Stimulates active hair follicles and encourages healthy hair growth.",
-      "Helps significantly reduce hair fall, breakage, and split ends.",
-      "Cools the scalp, fights dandruff, and prevents premature graying.",
-      "Nourishes hair strands from root to tip for noticeable shine and volume."
-    ],
-    highlights: ["Traditional Kerala formula", "Reduces hair fall", "Natural dandruff control"],
-    usage: ["Apply generously to the scalp and hair roots. Massage gently with fingertips and leave for at least 30 minutes before washing."]
-  },
-  "glow-plus-fairness-powder": {
-    benefits: [
-      "Improves skin tone and natural glow with authentic botanical herbs.",
-      "Gently exfoliates dead skin cells, clearing away impurities and unclogging pores.",
-      "Helps reduce blemishes, pigmentation spots, and sun tanning.",
-      "Natural and chemical-free alternative to harsh commercial face scrubs."
-    ],
-    highlights: ["Herbal skin rejuvenation", "Evens out skin tone", "Gentle herbal cleanser"],
-    usage: ["Mix a spoonful with water, rose water, or milk to form a paste. Apply on face and neck, leave for 10-15 minutes, then rinse gently."]
-  },
-  "glow-plus-skin-brightening-cream": {
-    benefits: [
-      "Deeply hydrates and replenishes the skin barrier for all-day moisture.",
-      "Brightens complexion and minimizes uneven tone and hyperpigmentation.",
-      "Rich in natural skin-loving vitamins and antioxidants.",
-      "Non-greasy, fast-absorbing texture suitable for daily use."
-    ],
-    highlights: ["Radiant healthy glow", "Non-greasy hydration", "Antioxidant rich"],
-    usage: ["Dot evenly across cleansed face and neck every morning and night. Massage gently in upward circular motions."]
-  },
-  "sankhu-puspam-face-wash": {
-    benefits: [
-      "Infused with Shankhupushpam (Butterfly Pea) to calm and refresh stressed skin.",
-      "Cleanses deep impurities and removes excess oil without stripping natural moisture.",
-      "Antioxidant-rich botanical extracts protect skin from environmental pollution.",
-      "Leaves skin feeling cool, revitalized, and crystal clear."
-    ],
-    highlights: ["Butterfly pea herbal extract", "Sulfate & Paraben free", "Gentle on sensitive skin"],
-    usage: ["Splash face with lukewarm water, lather a coin-sized amount in hands, gently massage face, and rinse thoroughly."]
-  },
-  "glow-plus-lip-care-cream": {
-    benefits: [
-      "Heals chapped, dry, and cracked lips with intense herbal moisturization.",
-      "Restores natural lip softness, suppleness, and a healthy rosy tint.",
-      "Shields lips against harsh weather and environmental dehydration.",
-      "Made with wholesome natural waxes, oils, and herbal infusions."
-    ],
-    highlights: ["Intense hydration", "Heals cracked lips", "Compact & travel friendly"],
-    usage: ["Smooth a small amount over lips as often as needed throughout the day and before bedtime."]
-  },
-  "baby-glow-urukku-velichenna": {
-    benefits: [
-      "100% pure homemade Urukku Velichenna (hot-processed virgin coconut oil).",
-      "Traditional Kerala secret for baby massage, cradle cap treatment, and skin nourishment.",
-      "Loaded with natural lauric acid and antioxidants for unmatched antimicrobial protection.",
-      "Edible grade, pure, aromatic, and free from any preservatives or adulterants."
-    ],
-    highlights: ["Authentic hot-processed oil", "Edible & baby-safe", "Traditional Kerala recipe"],
-    usage: ["Apply gently on baby's skin and scalp before bath. Can also be applied as a natural soothing balm."]
-  },
-  "painoplus-pain-relief-balm": {
-    benefits: [
-      "Quick on-the-spot soothing action for headaches, muscle sprains, and joint pain.",
-      "Infused with Changalam Paranda and warming aromatic herbs for fast penetration.",
-      "Convenient balm format that is non-sticky and mess-free.",
-      "Provides pleasant warming sensation followed by long-lasting comfort."
-    ],
-    highlights: ["Fast-acting balm", "Convenient travel size", "Relieves headaches & body aches"],
-    usage: ["Rub gently on temples, neck, forehead, or affected joints and muscles. Avoid contact with eyes."]
-  },
-  "stretch-ease-stretch-mark-cream": {
-    benefits: [
-      "Boosts skin elasticity and collagen strength during and after pregnancy.",
-      "Visibly softens the appearance of existing stretch marks and prevents new ones.",
-      "Deeply hydrates itchy, stretching skin with rich herbal emollients.",
-      "Safe, gentle, and nourishing for all skin types."
-    ],
-    highlights: ["Pregnancy & postpartum safe", "Improves elasticity", "Relieves dry itchy skin"],
-    usage: ["Massage generously over abdomen, hips, thighs, and breasts twice daily in circular motions."]
-  },
-  "ojas-boost-herbal-powder": {
-    benefits: [
-      "Traditional Ayurvedic formulation designed to elevate core vitality and Ojas (inner energy).",
-      "Supports immune defense, stamina, and overall physical endurance.",
-      "Helps counter fatigue, stress, and sluggish metabolism naturally.",
-      "Prepared from time-tested adaptogenic and restorative botanicals."
-    ],
-    highlights: ["Vitality & stamina booster", "Supports healthy immunity", "100% pure herbal blend"],
-    usage: ["Mix 1 teaspoon with warm milk, warm water, or honey once or twice daily after meals."]
-  },
-  "ashwagandha-powder": {
-    benefits: [
-      "Premier Ayurvedic adaptogen that reduces cortisol levels, stress, and anxiety.",
-      "Enhances physical strength, athletic stamina, and muscle recovery.",
-      "Promotes restful and deep natural sleep cycles.",
-      "Supports cognitive clarity, focus, and memory retention."
-    ],
-    highlights: ["Certified natural Ashwagandha", "Stress & sleep support", "Strength & vitality"],
-    usage: ["Mix 1/2 to 1 teaspoon in warm milk or water with a hint of honey before bedtime."]
-  },
-  "naikuruna-powder": {
-    benefits: [
-      "Rich natural source of L-DOPA that supports nervous system health and dopamine balance.",
-      "Enhances mood, mental energy, and overall physical stamina.",
-      "Traditionally used in Ayurveda to enhance reproductive vitality and endurance.",
-      "Pure, unadulterated botanical root powder processed under strict standards."
-    ],
-    highlights: ["Mucuna pruriens extract", "Supports nerve & mood health", "Ayurvedic vitality tonic"],
-    usage: ["Consume 1/2 teaspoon with warm milk or honey once daily, or as advised by a wellness expert."]
-  },
-  "kalonji-black-seed-oil": {
-    benefits: [
-      "Pure cold-pressed Nigella Sativa oil rich in thymoquinone and healthy fatty acids.",
-      "Strengthens hair roots, helps control premature thinning, and nourishes the scalp.",
-      "Soothes dry, flaky, irritated skin with powerful natural anti-inflammatory qualities.",
-      "A versatile ancient wellness remedy for holistic hair, scalp, and skin vitality."
-    ],
-    highlights: ["100% pure cold-pressed", "Thymoquinone rich", "Scalp & hair root strengthener"],
-    usage: ["Massage into hair and scalp, or apply a few drops onto skin areas needing targeted nourishment."]
-  },
-  "mozi-out-herbal-mosquito-repellent": {
-    benefits: [
-      "Natural mosquito and insect defense powered by plant-based essential oils.",
-      "100% DEET-free, non-toxic, and safe for family and children.",
-      "Pleasant herbal aroma without pungent chemical odors.",
-      "Long-lasting indoor and outdoor protection against mosquito bites."
-    ],
-    highlights: ["DEET-free & child safe", "Plant-based formula", "Pleasant herbal scent"],
-    usage: ["Spray evenly on exposed skin or clothing from a distance of 15 cm. Reapply every 3-4 hours as needed."]
-  },
-
-  // Traditional Foods
-  "kannan-kaya-powder": {
-    benefits: [
-      "Prepared from authentic raw Kerala Kannan bananas, renowned for easy baby digestion.",
-      "Ideal first solid food for babies that promotes healthy weight gain and gut wellness.",
-      "Rich in natural potassium, dietary fiber, and essential minerals.",
-      "100% natural, preservative-free, sugar-free, and chemical-free."
-    ],
-    highlights: ["Traditional baby food", "Promotes healthy weight", "Rich in fiber & potassium"],
-    usage: ["Cook 2 tablespoons with 1 cup of water or milk on low flame, stirring continuously until smooth porridge is formed."]
-  },
-  "kannan-kaya-dried-chips": {
-    benefits: [
-      "Sun-dried authentic Kannan raw banana slices ready for easy traditional cooking.",
-      "Excellent traditional ingredient for nutritious porridge and baby foods.",
-      "Contains no added salt, oil, or preservatives.",
-      "Long shelf life and retains all natural micronutrients of raw Kannan bananas."
-    ],
-    highlights: ["Sun-dried raw banana", "Zero additives", "Great for homemade baby food"],
-    usage: ["Powder in a dry grinder for fresh banana porridge, or use in traditional recipes."]
-  },
-  "homemade-banana-powder": {
-    benefits: [
-      "Wholesome baby porridge mix made from mature, sun-dried Kerala Nendran bananas.",
-      "Gentle on tiny tummies while fueling active growth with natural complex carbs.",
-      "Rich in dietary fiber and essential vitamins that support digestion.",
-      "Traditional home-style preparation made with utmost hygiene."
-    ],
-    highlights: ["Nutritious Nendran banana", "Easy to digest", "Zero chemicals or sugar"],
-    usage: ["Boil with milk or water for 5-7 minutes into a comforting, nutrient-dense porridge."]
-  },
-  "banana-dried-chips": {
-    benefits: [
-      "Crispy, golden Kerala banana chips fried to perfection in authentic pure coconut oil.",
-      "Made from handpicked mature Kerala Nendran bananas.",
-      "Mildly salted, crunch-packed traditional snack free from artificial food colorings.",
-      "Authentic taste of God's Own Country in every bite."
-    ],
-    highlights: ["Fried in pure coconut oil", "Authentic Kerala crunch", "No artificial colors"],
-    usage: ["Enjoy straight from the pack with hot tea, coffee, or as a crunchy side with Kerala meals."]
-  },
-  "ragi-powder": {
-    benefits: [
-      "High-calcium superfood grain that supports strong bones and teeth.",
-      "Rich in iron and fiber, helping prevent anemia and supporting smooth digestion.",
-      "Ideal wholesome porridge for growing children, diabetics, and fitness enthusiasts.",
-      "Naturally gluten-free whole grain flour."
-    ],
-    highlights: ["High calcium & iron", "Naturally gluten-free", "Healthy meal for all ages"],
-    usage: ["Cook with water or buttermilk with a pinch of salt, or prepare sweet ragi malt with milk and jaggery."]
-  },
-  "homemade-sambar-powder": {
-    benefits: [
-      "Authentic Kerala village recipe made by stone-grinding roasted whole spices.",
-      "Imparts unmatched aroma, deep color, and rich traditional flavor to sambar.",
-      "Free from preservatives, fillers, artificial flavor enhancers, or MSG.",
-      "Handcrafted in small batches to preserve volatile spice oils and freshness."
-    ],
-    highlights: ["Roasted whole spices", "No preservatives or MSG", "Aromatic Kerala flavor"],
-    usage: ["Add 1 to 2 tablespoons while cooking dal and vegetables to create rich, authentic Kerala sambar."]
-  },
-  "banana-figs": {
-    benefits: [
-      "Naturally sun-ripened, dehydrated Kadali bananas bursting with caramel-like sweetness.",
-      "A healthy, fiber-loaded alternative to refined candies and processed sweets.",
-      "Rich in instant energy, potassium, and natural digestive enzymes.",
-      "Zero added sugar, zero sulfur, and zero preservatives."
-    ],
-    highlights: ["Sun-ripened Kadali bananas", "No added sugar", "Natural energy booster"],
-    usage: ["Enjoy as a wholesome anytime snack, or dice into morning cereal, oatmeal, and trail mixes."]
-  },
-  "homemade-prawns-pickle": {
-    benefits: [
-      "Prepared with fresh succulent coastal prawns marinated in fiery Kerala spices.",
-      "Cooked in pure sesame oil with fresh curry leaves, garlic, and tangy vinegar.",
-      "Rich in protein and bursting with authentic malabar-style spicy punch.",
-      "Made traditionally in small batches for homestyle preservation and peak flavor."
-    ],
-    highlights: ["Fresh coastal prawns", "Sesame oil & Kerala spices", "Authentic homestyle recipe"],
-    usage: ["Pair a spoonful with steaming rice, kanji, parotta, or biryani for an explosion of coastal flavor."]
-  },
-  "homemade-pure-cow-ghee": {
-    benefits: [
-      "Crafted through traditional bilona churning of pure cow milk curd and slow heating.",
-      "Rich granular texture with an irresistible traditional aroma.",
-      "Loaded with butyric acid, fat-soluble vitamins A, D, E, and K for gut and heart health.",
-      "Promotes glowing skin, digestive fire (Agni), and immune resilience."
-    ],
-    highlights: ["Traditional granular bilona ghee", "Rich aroma & taste", "Supports digestion & immunity"],
-    usage: ["Drizzle a spoonful over warm rice, dosas, rotis, or use as a wholesome cooking and baking fat."]
-  },
-  "homemade-pork-lard": {
-    benefits: [
-      "Traditional rendered pure pork fat with a high smoke point perfect for cooking.",
-      "Provides unmatched crispiness to roasted meats, pastries, and stir-fries.",
-      "100% natural and unhydrogenated—free from industrial trans fats and chemical bleaches.",
-      "Rich in monounsaturated fats (oleic acid) for wholesome traditional cooking."
-    ],
-    highlights: ["High smoke point", "Unhydrogenated & pure", "Superior texture for cooking"],
-    usage: ["Ideal for searing, roasting, pan-frying, and baking flaky savory pie crusts and breads."]
-  },
-
-  // Handloom
-  "kerala-handloom-sarees": {
-    benefits: [
-      "Woven by master Kerala artisans on traditional wooden shuttle looms.",
-      "Breathable, lightweight 100% pure cotton fabric ideal for tropical climates.",
-      "Accented with classic Kasavu borders for timeless elegance on auspicious occasions.",
-      "Supports traditional handloom weaving communities and sustainable heritage fashion."
-    ],
-    highlights: ["100% handwoven cotton", "Authentic Kasavu border", "Lightweight & breathable"],
-    usage: ["Drape with matching traditional blouse for festivals, weddings, temples, and cultural ceremonies."]
-  },
-  "kerala-handloom-set-mundu": {
-    benefits: [
-      "The quintessential traditional two-piece attire (Mundum Neriyathum) of Kerala women.",
-      "Crafted from premium unbleached and bleached handwoven cotton with rich zari borders.",
-      "Softens with every wash, offering unmatched comfort in hot and humid weather.",
-      "Preserves ancient handloom craftsmanship passed down through generations."
-    ],
-    highlights: ["Authentic two-piece Mundum Neriyathum", "Pure handloom cotton", "Heritage Kasavu finish"],
-    usage: ["Wear the lower mundu around the waist and drape the neriyathu gracefully over the shoulder."]
-  },
-  "kerala-handloom-dhotis": {
-    benefits: [
-      "Classic Kerala men's handloom dhoti (Mundu) featuring premium cotton weave.",
-      "Distinctive golden or colored Kasavu border that looks regal and traditional.",
-      "Supreme all-day breathability and comfort for weddings, festivals, and daily rituals.",
-      "Durable natural weave that stands the test of time."
-    ],
-    highlights: ["Pure handloom cotton", "Regal Kasavu border", "Superior breathability & comfort"],
-    usage: ["Wrap around the waist and pleat at the center according to traditional Kerala style."]
-  }
-};
-
 const groupNames: Record<ProductGroup, string> = {
   wellness: "Herbal, Beauty & Wellness",
   food: "Traditional Kerala Food",
@@ -460,158 +42,126 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   await connection();
   const { slug } = await params;
-  let name = "";
-  let description = "";
 
   try {
     const dbProduct = await fetchProductByIdOrSlugFromDb(slug);
     if (dbProduct) {
-      name = dbProduct.name;
-      description = dbProduct.description || "";
+      return {
+        title: dbProduct.name,
+        description: dbProduct.description || `Explore ${dbProduct.name} at UPPILIEES.`,
+      };
     }
-  } catch {
-    // fall back to static lookup
+  } catch (err) {
+    console.error("Metadata DB lookup error:", err);
   }
 
-  if (!name) {
-    const found = findProductBySlug(slug);
-    if (found) {
-      name = found.product.name;
-      description = found.product.description || "";
-    }
-  }
-
-  if (!name) {
-    return { title: "Product Not Found" };
-  }
-
-  const seo = seoProducts[slug];
-
-  return {
-    title: seo?.heading ?? name,
-    description: description || `Explore ${name} at UPPILIEES.`,
-  };
+  return { title: "Product Not Found" };
 }
 
 export default async function ProductPage({ params }: { params: Params }) {
   await connection();
   const { slug } = await params;
 
-  let product: Product | null = null;
-  let collection: Collection | null = null;
-  let dbDetails: any = null;
-
+  let apiProduct: any = null;
   try {
-    const apiProduct = await fetchProductByIdOrSlugFromDb(slug);
-    if (apiProduct) {
-      dbDetails = apiProduct;
-      const catSlug = apiProduct.category_slug || "herbal-beauty";
-      const safePrice = safeNumber(apiProduct.price, 0);
-      const safeMrp = safeNumber(apiProduct.mrp, safePrice);
-      product = {
-        id: apiProduct.id,
-        name: apiProduct.name,
-        slug: apiProduct.slug,
-        category: apiProduct.subcategory || apiProduct.category_name || "General",
-        price: safePrice,
-        mrp: safeMrp,
-        description: apiProduct.description || undefined,
-        collectionSlug: catSlug,
-        image: apiProduct.image_url || apiProduct.image,
-        images: apiProduct.images,
-        stock: apiProduct.stock,
-        in_stock: apiProduct.in_stock,
-      };
-      collection =
-        collections.find((c) => c.slug === catSlug) || {
-          slug: catSlug,
-          title: apiProduct.category_name || "Products",
-          subtitle: "",
-          products: [product],
-          priceRanges: [],
-        };
-    }
-  } catch {
-    // fall back to static data
+    apiProduct = await fetchProductByIdOrSlugFromDb(slug);
+  } catch (err) {
+    console.error("Product page DB fetch error:", err);
   }
 
-  if (!product || !collection) {
-    const found = findProductBySlug(slug);
-    if (!found) notFound();
-    collection = found.collection;
-    product = found.product;
+  if (!apiProduct) {
+    notFound();
   }
+
+  const catSlug = apiProduct.category_slug || "herbal-beauty";
+  const safePrice = safeNumber(apiProduct.price, 0);
+  const safeMrp = safeNumber(apiProduct.mrp, safePrice);
+
+  const product: Product = {
+    id: apiProduct.id,
+    name: apiProduct.name,
+    slug: apiProduct.slug,
+    category: apiProduct.subcategory || apiProduct.category_name || "General",
+    price: safePrice,
+    mrp: safeMrp,
+    description: apiProduct.description || undefined,
+    collectionSlug: catSlug,
+    image: apiProduct.image_url || apiProduct.image || "",
+    images: Array.isArray(apiProduct.images) ? apiProduct.images : [],
+    stock: apiProduct.stock,
+    in_stock: apiProduct.in_stock,
+  };
+
+  const collection: Collection =
+    collections.find((c) => c.slug === catSlug) || {
+      slug: catSlug,
+      title: apiProduct.category_name || "Products",
+      subtitle: "",
+      products: [product],
+      priceRanges: [],
+    };
 
   const discount = getDiscount(product);
-  const seo = seoProducts[slug];
 
-  const group: ProductGroup =
-    seo?.group ??
-    (collection.slug.includes("handloom")
-      ? "handloom"
-      : collection.slug.includes("food")
-        ? "food"
-        : "wellness");
+  const group: ProductGroup = collection.slug.includes("handloom")
+    ? "handloom"
+    : collection.slug.includes("food")
+    ? "food"
+    : "wellness";
 
-  const info = productInformation[slug] ?? {};
-
-  // Related products
+  // Load related products from the database in the same category (sorted by display_order)
   let others: Product[] = [];
   try {
     const relatedRows = await fetchProductsFromDb({ category: collection.slug });
-    if (relatedRows.length > 0) {
-      others = relatedRows
-        .filter((item) => String(item.id) !== String(product!.id) && item.slug !== product!.slug)
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          category: p.subcategory || p.category_name || "General",
-          price: safeNumber(p.price, 0),
-          mrp: safeNumber(p.mrp, safeNumber(p.price, 0)),
-          description: p.description || undefined,
-          collectionSlug: p.category_slug || collection!.slug,
-          image: p.image_url || p.image,
-          images: p.images,
-          stock: p.stock,
-          in_stock: p.in_stock,
-        }));
-    }
-  } catch {
-    others = collection.products.filter((item) => item.id !== product!.id);
-  }
-
-  if (others.length === 0) {
-    others = collection.products.filter((item) => item.slug !== product!.slug);
+    others = relatedRows
+      .filter((item) => String(item.id) !== String(product.id) && item.slug !== product.slug)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        category: p.subcategory || p.category_name || "General",
+        price: safeNumber(p.price, 0),
+        mrp: safeNumber(p.mrp, safeNumber(p.price, 0)),
+        description: p.description || undefined,
+        collectionSlug: p.category_slug || collection.slug,
+        image: p.image_url || p.image || "",
+        images: Array.isArray(p.images) ? p.images : [],
+        stock: p.stock,
+        in_stock: p.in_stock,
+      }));
+  } catch (err) {
+    console.error("Related products DB fetch error:", err);
   }
 
   const related = others.slice(0, 8);
 
-  const customBenefits = dbDetails?.benefits?.trim()
-    ? dbDetails.benefits.split("\n").map((s: string) => s.trim()).filter(Boolean)
-    : null;
+  const splitLines = (text?: string | null) =>
+    text?.trim()
+      ? text
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null;
 
-  const customHowToUse = dbDetails?.howToUse?.trim()
-    ? dbDetails.howToUse.split("\n").map((s: string) => s.trim()).filter(Boolean)
-    : null;
+  const benefitsList = splitLines(apiProduct.benefits) || [
+    "Authentic and pure traditional quality from UPPILIEES.",
+    "Carefully crafted following traditional Kerala methods.",
+    "No harmful chemicals or artificial preservatives.",
+  ];
 
-  const customIngredients = dbDetails?.ingredients?.trim()
-    ? dbDetails.ingredients.split("\n").map((s: string) => s.trim()).filter(Boolean)
-    : null;
+  const howToUseList = splitLines(apiProduct.howToUse || apiProduct.how_to_use) || [
+    "Please refer to the product packaging for directions of use.",
+  ];
 
-  const customReturnPolicy = dbDetails?.returnPolicy?.trim()
-    ? dbDetails.returnPolicy.split("\n").map((s: string) => s.trim()).filter(Boolean)
-    : null;
+  const ingredientsList = splitLines(apiProduct.ingredients) || [
+    group === "handloom"
+      ? "Please refer to the fabric and product care instructions."
+      : "Please refer to the product packaging for verified ingredients and composition.",
+  ];
 
-  const benefitsList = customBenefits || (info.benefits?.length
-    ? info.benefits
-    : info.highlights?.length
-      ? info.highlights
-      : [
-          `Authentic and pure traditional quality from UPPILIEES.`,
-          `Carefully crafted following traditional Kerala methods.`,
-          `No harmful chemicals or artificial preservatives.`
-        ]);
+  const returnPolicyList = splitLines(apiProduct.returnPolicy || apiProduct.return_policy) || [
+    "We accept returns and replacements within 7 days of delivery for damaged or defective items. Please contact our support team with order details.",
+  ];
 
   const tabs: ProductTab[] = [
     {
@@ -622,41 +172,27 @@ export default async function ProductPage({ params }: { params: Params }) {
     {
       id: "how",
       label: "How to Use",
-      paragraphs: customHowToUse || (info.usage?.length
-        ? info.usage
-        : ["Please refer to the product packaging for directions of use."]),
+      paragraphs: howToUseList,
     },
     group === "handloom"
       ? {
           id: "care",
           label: "Care",
-          paragraphs: customIngredients || (info.careInstructions?.length
-            ? info.careInstructions
-            : ["Please refer to the fabric and product care instructions."]),
+          paragraphs: ingredientsList,
         }
       : {
           id: "ingredients",
           label: "Ingredients",
-          paragraphs: customIngredients || (info.ingredients?.length
-            ? [info.ingredients.join(", ")]
-            : [
-                "Please refer to the product packaging for verified ingredients and composition.",
-              ]),
+          paragraphs: ingredientsList,
         },
     {
       id: "returns",
       label: "Return Policy",
-      paragraphs: customReturnPolicy || [
-        "We accept returns and replacements within 7 days of delivery for damaged or defective items. Please contact our support team with order details."
-      ],
+      paragraphs: returnPolicyList,
     },
   ];
 
-  // Merge multiple images from database details if available
-  if (dbDetails?.images && Array.isArray(dbDetails.images) && dbDetails.images.length > 0) {
-    (product as any).images = dbDetails.images;
-  }
-  const customSizes = dbDetails?.sizes && Array.isArray(dbDetails.sizes) ? dbDetails.sizes : [];
+  const customSizes = Array.isArray(apiProduct.sizes) ? apiProduct.sizes : [];
 
   return (
     <div className="min-h-screen bg-white text-gray-900 pb-8">
@@ -692,12 +228,12 @@ export default async function ProductPage({ params }: { params: Params }) {
             </p>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-[#063D27] mt-3 leading-tight">
-              {seo?.heading ?? product.name}
+              {product.name}
             </h1>
 
-            {(info.overview || product.description) && (
+            {product.description && (
               <p className="text-gray-600 leading-relaxed mt-5">
-                {info.overview || product.description}
+                {product.description}
               </p>
             )}
 

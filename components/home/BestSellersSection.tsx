@@ -8,6 +8,7 @@ import WishlistButton from "@/components/WishlistButton";
 import { addToCart as addCartItem } from "@/lib/cart";
 import { setBuyNowItem } from "@/lib/buyNow";
 import { api } from "@/lib/api";
+import { optimizeCloudinaryUrl } from "@/lib/format";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the section content
@@ -205,16 +206,22 @@ function ProductCard({
       <Link
         href={product.href}
         aria-label={`View ${product.name}`}
-        className="relative block aspect-square w-full overflow-hidden bg-[#F4F8F1] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#07552F]"
+        className="relative flex items-center justify-center aspect-square w-full overflow-hidden bg-[#F4F8F1] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#07552F]"
       >
-        <Image
-          src={product.image}
-          alt={product.alt}
-          fill
-          sizes="(min-width: 1024px) 25vw, 50vw"
-          quality={85}
-          className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 md:p-4"
-        />
+        {product.image ? (
+          <Image
+            src={product.image}
+            alt={product.alt}
+            fill
+            sizes="(min-width: 1024px) 25vw, 50vw"
+            quality={85}
+            className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 md:p-4"
+          />
+        ) : (
+          <span className="px-4 text-center text-sm font-semibold text-[#07552F]">
+            {product.name}
+          </span>
+        )}
       </Link>
 
       {/* Details */}
@@ -314,21 +321,24 @@ export default function BestSellersSection({
       setItems(initialProducts);
       return;
     }
-    api<{ products: any[] }>("/products?featured=true")
+    api<{ products: any[] }>("/api/products?featured=true")
       .then((data) => {
         if (data?.products && data.products.length > 0) {
           const mapped: BestSellerProduct[] = data.products.map((p) => {
             const safePrice = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
             const safeMrp = Number.isFinite(Number(p.mrp)) ? Number(p.mrp) : safePrice;
+            const href = `/products/${p.slug}`;
+            const fallbackMatch = BEST_SELLERS.find((b) => b.href === href);
+            const cloudImg = optimizeCloudinaryUrl(p.image_url || p.image, 500);
             return {
               id: p.id,
               name: p.name,
-              description: p.description || "",
+              description: p.description || fallbackMatch?.description || "",
               price: safePrice,
               originalPrice: safeMrp > safePrice ? safeMrp : undefined,
-              image: p.image_url || p.image || `/products/${p.slug}.jpg`,
+              image: cloudImg || fallbackMatch?.image || "",
               alt: p.name,
-              href: `/products/${p.slug}`,
+              href,
             };
           });
           setItems(mapped);

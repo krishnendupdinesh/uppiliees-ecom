@@ -18,8 +18,21 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category") || undefined;
     const featured = searchParams.get("featured") === "true";
     const search = searchParams.get("search") || undefined;
+    const wantInactive = searchParams.get("includeInactive") === "true";
 
-    const products = await fetchProductsFromDb({ category, featured, search });
+    // Only allow includeInactive if requester is an admin
+    let includeInactive = false;
+    if (wantInactive) {
+      const admin = await requireAdminUser(req);
+      includeInactive = Boolean(admin);
+    }
+
+    const products = await fetchProductsFromDb({
+      category,
+      featured,
+      search,
+      includeInactive,
+    });
     return NextResponse.json({ products });
   } catch (error: any) {
     console.error("GET /api/products error:", error);
@@ -57,6 +70,8 @@ export async function POST(req: NextRequest) {
       body.in_stock !== undefined
         ? Boolean(body.in_stock) && stock > 0
         : stock > 0;
+    const isActive = body.is_active !== undefined ? Boolean(body.is_active) : true;
+    const displayOrder = Math.max(0, Math.floor(safeNumber(body.display_order, 0)));
 
     // Resolve category_id
     let categoryId: number | null = body.category_id ? Number(body.category_id) : null;
@@ -73,9 +88,10 @@ export async function POST(req: NextRequest) {
     const slug = await generateUniqueSlug(body.slug || name);
     const subcategory = String(body.subcategory || body.category_name || "").trim() || null;
     const description = body.description ? String(body.description).trim() : null;
+    const tags = body.tags ? String(body.tags).trim() : null;
     const featured = Boolean(body.featured);
 
-    // Gather images and publicIds
+    // Gather uploaded images and publicIds (never store non-existent /products/*.jpg placeholders)
     const rawImages: string[] = Array.isArray(body.images)
       ? body.images.map((s: any) => String(s || "").trim())
       : [];
@@ -85,9 +101,10 @@ export async function POST(req: NextRequest) {
 
     const imageEntries: { url: string; publicId: string | null }[] = [];
     for (let i = 0; i < rawImages.length; i++) {
-      if (rawImages[i]) {
+      const url = rawImages[i];
+      if (url && !url.startsWith("/products/")) {
         imageEntries.push({
-          url: rawImages[i],
+          url,
           publicId: rawPublicIds[i] || null,
         });
       }
@@ -95,11 +112,15 @@ export async function POST(req: NextRequest) {
 
     const fallbackImageUrl = String(body.image_url || body.image || "").trim();
     const fallbackPublicId = String(body.image_public_id || body.publicId || "").trim() || null;
-    if (imageEntries.length === 0 && fallbackImageUrl) {
+    if (
+      imageEntries.length === 0 &&
+      fallbackImageUrl &&
+      !fallbackImageUrl.startsWith("/products/")
+    ) {
       imageEntries.push({ url: fallbackImageUrl, publicId: fallbackPublicId });
     }
 
-    const primaryImageUrl = imageEntries[0]?.url || `/products/${slug}.jpg`;
+    const primaryImageUrl = imageEntries[0]?.url || null;
     const primaryPublicId = imageEntries[0]?.publicId || null;
 
     const sizesJson = Array.isArray(body.sizes) ? JSON.stringify(body.sizes) : null;
@@ -116,9 +137,10 @@ export async function POST(req: NextRequest) {
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO products (
         name, slug, category_id, subcategory, description,
-        price, mrp, stock, in_stock, image_url, image_public_id,
-        sizes_json, benefits, how_to_use, ingredients, return_policy, featured
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        price, mrp, stock, in_stock, is_active, display_order, tags,
+        image_url, image_public_id, sizes_json,
+        benefits, how_to_use, ingredients, return_policy, featured
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         slug,
@@ -129,6 +151,9 @@ export async function POST(req: NextRequest) {
         mrp,
         stock,
         inStock,
+        isActive,
+        displayOrder,
+        tags,
         primaryImageUrl,
         primaryPublicId,
         sizesJson,
@@ -143,19 +168,16 @@ export async function POST(req: NextRequest) {
     const productId = result.insertId;
 
     // Save image_url and public_id rows in product_images table
-    const entriesToInsert =
-      imageEntries.length > 0
-        ? imageEntries
-        : [{ url: primaryImageUrl, publicId: primaryPublicId }];
-
-    for (let i = 0; i < entriesToInsert.length; i++) {
+    for (let i = 0; i < imageEntries.length; i++) {
       await pool.execute(
         "INSERT INTO product_images (product_id, image_url, public_id, sort_order) VALUES (?, ?, ?, ?)",
-        [productId, entriesToInsert[i].url, entriesToInsert[i].publicId, i]
+        [productId, imageEntries[i].url, imageEntries[i].publicId, i]
       );
     }
 
-    const created = await fetchProductByIdOrSlugFromDb(String(productId));
+    const created = await fetchProductByIdOrSlugFromDb(String(productId), {
+      includeInactive: true,
+    });
     return NextResponse.json(created, { status: 201 });
   } catch (error: any) {
     console.error("POST /api/products error:", error);

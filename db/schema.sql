@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS products (
   mrp DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   stock INT NOT NULL DEFAULT 0,
   in_stock BOOLEAN NOT NULL DEFAULT TRUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  display_order INT NOT NULL DEFAULT 0,
+  tags TEXT NULL,
   image_url TEXT NULL,
   image_public_id VARCHAR(255) NULL,
   sizes_json TEXT NULL,
@@ -47,7 +50,8 @@ CREATE TABLE IF NOT EXISTS products (
   CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
   INDEX idx_products_category (category_id),
   INDEX idx_products_featured (featured),
-  INDEX idx_products_in_stock (in_stock)
+  INDEX idx_products_in_stock (in_stock),
+  INDEX idx_products_active_order (is_active, display_order)
 );
 
 -- 4. Product Images table (one product can have many images)

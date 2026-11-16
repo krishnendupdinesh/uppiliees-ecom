@@ -1,25 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   Check,
   Sparkles,
   AlertCircle,
   Package,
   Upload,
-  FileText,
-  HelpCircle,
   Plus,
   Trash2,
+  Star,
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import type { Product } from "@/lib/admin/types";
 import { api } from "@/lib/api";
-import ImageUpload from "@/components/ImageUpload";
+import { optimizeCloudinaryUrl } from "@/lib/format";
 
 type Props = { product?: Product };
+
+type UploadedImageItem = {
+  url: string;
+  publicId: string;
+};
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export default function ProductForm({ product }: Props) {
   const router = useRouter();
@@ -28,30 +38,48 @@ export default function ProductForm({ product }: Props) {
   const [success, setSuccess] = useState(false);
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
 
+  // Image uploader state (one or many images)
+  const initialImageItems: UploadedImageItem[] = (() => {
+    const urls = Array.isArray(product?.images) ? product!.images.filter(Boolean) : [];
+    const pids = Array.isArray(product?.imagePublicIds) ? product!.imagePublicIds : [];
+    if (urls.length > 0) {
+      return urls.map((u, idx) => ({
+        url: u,
+        publicId: pids[idx] || "",
+      }));
+    }
+    if (product?.image) {
+      return [{ url: product.image, publicId: product.publicId || "" }];
+    }
+    return [];
+  })();
+
+  const [imageItems, setImageItems] = useState<UploadedImageItem[]>(initialImageItems);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
+
   const [form, setForm] = useState({
     name: product?.name ?? "",
+    slug: product?.slug ?? "",
     category_id: product?.category_id ?? 1,
     category_name: product?.category ?? "",
-    subcategory: product?.subcategory ?? product?.category ?? "",
+    subcategory: product?.subcategory ?? "",
     price: product?.price ?? 0,
     mrp: product?.mrp ?? 0,
     stock: product?.stock ?? 25,
     in_stock: product?.in_stock ?? (product ? product.stock > 0 : true),
-    image: product?.image ?? "",
-    publicId: product?.publicId ?? "",
-    images: (product?.images && product.images.length > 0 ? product.images : [product?.image ?? ""]).slice(0, 4),
-    imagePublicIds: (product?.imagePublicIds && product.imagePublicIds.length > 0
-      ? product.imagePublicIds
-      : [product?.publicId ?? ""]
-    ).slice(0, 4),
+    is_active: product?.is_active ?? true,
+    display_order: product?.display_order ?? 0,
+    tags: product?.tags ?? "",
     description: product?.description ?? "",
     featured: product?.featured ?? false,
 
     // Multiple Sizes and separate pricing
     sizes: (product?.sizes && product.sizes.length > 0
       ? product.sizes
-      : []
-    ) as { size: string; price: number; mrp?: number; stock?: number }[],
+      : []) as { size: string; price: number; mrp?: number; stock?: number }[],
 
     // Rich descriptive sections
     benefits: product?.benefits ?? "",
@@ -66,7 +94,10 @@ export default function ProductForm({ product }: Props) {
         setCategories(cats);
         if (product && cats.length > 0) {
           const match = cats.find(
-            (c) => c.slug === product.category || c.name === product.category
+            (c) =>
+              c.id === Number(product.category_id) ||
+              c.slug === product.category ||
+              c.name === product.category
           );
           if (match) {
             setForm((f) => ({ ...f, category_id: match.id, category_name: match.name }));
@@ -80,43 +111,120 @@ export default function ProductForm({ product }: Props) {
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Handle Cloudinary image upload completion for a specific photo slot
-  const handleImageUploaded = (idx: number, url: string, publicId: string) => {
-    setForm((prev) => {
-      const updatedImages = [...(prev.images || [])];
-      const updatedPublicIds = [...(prev.imagePublicIds || [])];
-      updatedImages[idx] = url;
-      updatedPublicIds[idx] = publicId;
+  // Handle selecting one or multiple image files and uploading to /api/upload
+  async function handleMultiImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-      return {
-        ...prev,
-        images: updatedImages,
-        imagePublicIds: updatedPublicIds,
-        ...(idx === 0 ? { image: url, publicId } : {}),
-      };
+    const files = Array.from(fileList);
+    setUploadError("");
+
+    // Validate all selected files first
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        setUploadError(`"${file.name}" is not a valid image file.`);
+        e.target.value = "";
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setUploadError(`"${file.name}" exceeds the 5 MB size limit.`);
+        e.target.value = "";
+        return;
+      }
+    }
+
+    setUploadingImages(true);
+    const newlyUploaded: UploadedImageItem[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgressText(`Uploading image ${i + 1} of ${files.length} (${file.name})...`);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || `Failed to upload ${file.name}`);
+        }
+
+        newlyUploaded.push({
+          url: data.url,
+          publicId: data.publicId || "",
+        });
+      }
+
+      setImageItems((prev) => [...prev, ...newlyUploaded]);
+    } catch (err: any) {
+      setUploadError(err?.message || "Failed to upload one or more images.");
+    } finally {
+      setUploadingImages(false);
+      setUploadProgressText("");
+      e.target.value = "";
+    }
+  }
+
+  // Choose which image is the Main image (move to index 0)
+  function handleSetMainImage(idx: number) {
+    if (idx <= 0 || idx >= imageItems.length) return;
+    setImageItems((prev) => {
+      const next = [...prev];
+      const [chosen] = next.splice(idx, 1);
+      next.unshift(chosen);
+      return next;
     });
-  };
+  }
 
-  // Handle clearing/removing a photo slot
-  const handleImageRemoved = (idx: number) => {
-    setForm((prev) => {
-      const updatedImages = [...(prev.images || [])];
-      const updatedPublicIds = [...(prev.imagePublicIds || [])];
-      updatedImages[idx] = "";
-      updatedPublicIds[idx] = "";
-
-      return {
-        ...prev,
-        images: updatedImages,
-        imagePublicIds: updatedPublicIds,
-        ...(idx === 0
-          ? { image: updatedImages[1] || "", publicId: updatedPublicIds[1] || "" }
-          : {}),
-      };
+  // Reorder images (move up/earlier or down/later)
+  function handleMoveImage(idx: number, direction: -1 | 1) {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= imageItems.length) return;
+    setImageItems((prev) => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[targetIdx];
+      next[targetIdx] = temp;
+      return next;
     });
-  };
+  }
 
-  const handleFileUpload = (field: "description" | "benefits" | "howToUse" | "ingredients" | "returnPolicy") => {
+  // Remove an image and delete it from Cloudinary via /api/delete-image
+  async function handleRemoveImage(idx: number) {
+    const item = imageItems[idx];
+    if (!item) return;
+
+    setUploadError("");
+    setDeletingIdx(idx);
+
+    try {
+      if (item.publicId) {
+        const res = await fetch("/api/delete-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ publicId: item.publicId }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to delete image from Cloudinary.");
+        }
+      }
+      setImageItems((prev) => prev.filter((_, i) => i !== idx));
+    } catch (err: any) {
+      setUploadError(err?.message || "Could not remove image.");
+    } finally {
+      setDeletingIdx(null);
+    }
+  }
+
+  const handleFileUpload = (
+    field: "description" | "benefits" | "howToUse" | "ingredients" | "returnPolicy"
+  ) => {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -129,7 +237,6 @@ export default function ProductForm({ product }: Props) {
         }
       };
       reader.readAsText(file);
-      // Reset input value so re-uploading the same file triggers change
       e.target.value = "";
     };
   };
@@ -142,10 +249,11 @@ export default function ProductForm({ product }: Props) {
 
     try {
       const selectedCat = categories.find((c) => c.id === Number(form.category_id));
-      const imageList = (form.images || []).map((s) => s.trim()).filter(Boolean);
-      const publicIdList = (form.imagePublicIds || []).map((s) => (s || "").trim());
-      const primaryImage = imageList[0] || form.image.trim() || undefined;
-      const primaryPublicId = publicIdList[0] || form.publicId.trim() || undefined;
+      const cleanImages = imageItems.filter((item) => item.url.trim().length > 0);
+      const imageList = cleanImages.map((item) => item.url.trim());
+      const publicIdList = cleanImages.map((item) => (item.publicId || "").trim());
+      const primaryImage = imageList[0] || undefined;
+      const primaryPublicId = publicIdList[0] || undefined;
 
       const validSizes = (form.sizes || [])
         .filter((s) => s.size.trim())
@@ -158,22 +266,33 @@ export default function ProductForm({ product }: Props) {
 
       const payload = {
         name: form.name.trim(),
+        slug: form.slug.trim() || undefined,
         category_id: Number(form.category_id),
-        category_name: selectedCat?.name || form.category_name || "General",
-        subcategory: (form.subcategory || selectedCat?.name || form.category_name || "General").trim(),
+        category_name: selectedCat?.name || form.category_name || "Herbal & Beauty",
+        subcategory: (
+          form.subcategory ||
+          selectedCat?.name ||
+          form.category_name ||
+          "General"
+        ).trim(),
         price: validSizes.length > 0 ? validSizes[0].price : Number(form.price || 0),
-        mrp: validSizes.length > 0 ? (validSizes[0].mrp || validSizes[0].price) : Number(form.mrp || form.price || 0),
-        stock: form.in_stock ? Number(form.stock ?? 0) : 0,
+        mrp:
+          validSizes.length > 0
+            ? validSizes[0].mrp || validSizes[0].price
+            : Number(form.mrp || form.price || 0),
+        stock: Number(form.stock ?? 0),
         in_stock: Boolean(form.in_stock) && Number(form.stock ?? 0) > 0,
+        is_active: Boolean(form.is_active),
+        display_order: Number(form.display_order || 0),
+        tags: form.tags.trim() || undefined,
         image: primaryImage,
         image_url: primaryImage,
         publicId: primaryPublicId,
         image_public_id: primaryPublicId,
-        images: imageList.length > 0 ? imageList : primaryImage ? [primaryImage] : [],
+        images: imageList,
         imagePublicIds: publicIdList,
         description: form.description.trim() || undefined,
         featured: Boolean(form.featured),
-
         sizes: validSizes,
         benefits: form.benefits.trim() || undefined,
         howToUse: form.howToUse.trim() || undefined,
@@ -199,7 +318,7 @@ export default function ProductForm({ product }: Props) {
       setTimeout(() => {
         router.push("/admin/products");
         router.refresh();
-      }, 700);
+      }, 600);
     } catch (err: any) {
       setError(err.message || "Could not save the product. Please try again.");
     } finally {
@@ -209,7 +328,7 @@ export default function ProductForm({ product }: Props) {
 
   const inputClass =
     "w-full rounded-xl border border-[#cfdccf]/80 bg-white px-4 py-2.5 text-sm text-[#052E1D] outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/20";
-  const labelClass = "block text-xs font-semibold uppercase tracking-wider text-[#052E1D]";
+  const labelClass = "block text-xs font-semibold uppercase tracking-wider text-[#052E1D] mb-1";
 
   return (
     <form onSubmit={submit} className="space-y-6">
@@ -217,8 +336,8 @@ export default function ProductForm({ product }: Props) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#07552F] hover:underline"
+          onClick={() => router.push("/admin/products")}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#07552F] hover:underline cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" /> Back to products
         </button>
@@ -227,12 +346,12 @@ export default function ProductForm({ product }: Props) {
           <button
             type="button"
             onClick={() => router.push("/admin/products")}
-            className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-sm font-medium text-[#052E1D] transition hover:bg-[#F5F8F4]"
+            className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-sm font-medium text-[#052E1D] transition hover:bg-[#F5F8F4] cursor-pointer"
           >
             Cancel
           </button>
           <button
-            disabled={saving || success}
+            disabled={saving || success || uploadingImages}
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07552F] px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
           >
@@ -259,7 +378,7 @@ export default function ProductForm({ product }: Props) {
       )}
 
       {/* Main Layout */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_330px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Left Column: Essential & Detailed Specifications */}
         <div className="space-y-6">
           {/* General Information Card */}
@@ -268,18 +387,30 @@ export default function ProductForm({ product }: Props) {
               Basic Product Details
             </h2>
 
-            <div>
-              <label className={labelClass}>Product Title *</label>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-                placeholder="e.g. Traditional Kerala Handloom Saree"
-                className={inputClass}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Product Title *</label>
+                <input
+                  required
+                  value={form.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  placeholder="e.g. Traditional Kerala Handloom Saree"
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>URL Slug (Auto-generated if empty)</label>
+                <input
+                  value={form.slug}
+                  onChange={(e) => set("slug", e.target.value)}
+                  placeholder="e.g. kerala-handloom-sarees"
+                  className={inputClass}
+                />
+              </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label className={labelClass}>Category *</label>
                 <select
@@ -287,7 +418,11 @@ export default function ProductForm({ product }: Props) {
                   onChange={(e) => {
                     const id = Number(e.target.value);
                     const found = categories.find((c) => c.id === id);
-                    setForm((f) => ({ ...f, category_id: id, category_name: found?.name || "" }));
+                    setForm((f) => ({
+                      ...f,
+                      category_id: id,
+                      category_name: found?.name || "",
+                    }));
                   }}
                   className={inputClass}
                 >
@@ -299,6 +434,52 @@ export default function ProductForm({ product }: Props) {
                 </select>
               </div>
 
+              <div>
+                <label className={labelClass}>Subcategory / Group</label>
+                <input
+                  value={form.subcategory}
+                  onChange={(e) => set("subcategory", e.target.value)}
+                  placeholder="e.g. Skin Care, Powders, Dried Foods"
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Display Order</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.display_order}
+                  onChange={(e) => set("display_order", Number(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className={labelClass}>Selling Price (₹) *</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={form.price}
+                  onChange={(e) => set("price", Number(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>MRP / Original Price (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.mrp}
+                  onChange={(e) => set("mrp", Number(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
               <div>
                 <label className={labelClass}>Available Stock Units *</label>
                 <input
@@ -319,75 +500,99 @@ export default function ProductForm({ product }: Props) {
               </div>
             </div>
 
-            {/* In Stock / Out of Stock Toggle */}
-            <div className="flex items-center justify-between rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] px-4 py-3">
-              <div>
-                <span className="text-sm font-bold text-[#052E1D]">
-                  Stock Availability Status
-                </span>
-                <p className="text-xs text-[#5b6b60]">
-                  Mark this product as In Stock or Out of Stock on the store.
-                </p>
+            {/* Status Toggles: In/Out of Stock & Show/Hide on Website */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] px-4 py-3">
+                <div>
+                  <span className="text-sm font-bold text-[#052E1D] block">
+                    Stock Availability
+                  </span>
+                  <span className="text-xs text-[#5b6b60]">
+                    In Stock or Out of Stock
+                  </span>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.in_stock && form.stock > 0)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((f) => ({
+                        ...f,
+                        in_stock: checked,
+                        stock: checked && f.stock <= 0 ? 25 : f.stock,
+                      }));
+                    }}
+                    className="h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
+                  />
+                  <span
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                      form.in_stock && form.stock > 0
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {form.in_stock && form.stock > 0 ? "In Stock" : "Out of Stock"}
+                  </span>
+                </label>
               </div>
-              <label className="inline-flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(form.in_stock && form.stock > 0)}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setForm((f) => ({
-                      ...f,
-                      in_stock: checked,
-                      stock: checked && f.stock <= 0 ? 25 : f.stock,
-                    }));
-                  }}
-                  className="h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
-                />
-                <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    form.in_stock && form.stock > 0
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {form.in_stock && form.stock > 0 ? "In Stock" : "Out of Stock"}
-                </span>
-              </label>
+
+              <div className="flex items-center justify-between rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] px-4 py-3">
+                <div>
+                  <span className="text-sm font-bold text-[#052E1D] block">
+                    Website Visibility
+                  </span>
+                  <span className="text-xs text-[#5b6b60]">
+                    Show or hide on store
+                  </span>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.is_active)}
+                    onChange={(e) => set("is_active", e.target.checked)}
+                    className="h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
+                  />
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                      form.is_active
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {form.is_active ? (
+                      <>
+                        <Eye className="h-3 w-3" /> Visible
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="h-3 w-3" /> Hidden
+                      </>
+                    )}
+                  </span>
+                </label>
+              </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Default / Base Selling Price (₹) *</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  required
-                  value={form.price}
-                  onChange={(e) => set("price", Number(e.target.value))}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Default / Base MRP (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.mrp}
-                  onChange={(e) => set("mrp", Number(e.target.value))}
-                  className={inputClass}
-                />
-              </div>
+            <div>
+              <label className={labelClass}>Tags / Highlights (comma-separated)</label>
+              <input
+                value={form.tags}
+                onChange={(e) => set("tags", e.target.value)}
+                placeholder="e.g. 100% Herbal & Ayurvedic, Fast-acting relief, Zero preservatives"
+                className={inputClass}
+              />
             </div>
 
             {/* Sizes & Separate Prices Section */}
             <div className="rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-[#052E1D]">Product Sizes & Separate Prices</h3>
+                  <h3 className="text-sm font-bold text-[#052E1D]">
+                    Product Sizes & Separate Prices
+                  </h3>
                   <p className="text-xs text-[#5b6b60]">
-                    Add specific sizes/weights (e.g. 100ml, 250ml, 500ml, Small, XL) with their own prices.
+                    Add specific sizes/weights (e.g. 100ml, 250ml, 500g, Standard) with their own prices.
                   </p>
                 </div>
                 <button
@@ -395,7 +600,12 @@ export default function ProductForm({ product }: Props) {
                   onClick={() => {
                     const next = [
                       ...(form.sizes || []),
-                      { size: "", price: form.price || 0, mrp: form.mrp || form.price || 0, stock: form.stock || 25 },
+                      {
+                        size: "",
+                        price: form.price || 0,
+                        mrp: form.mrp || form.price || 0,
+                        stock: form.stock || 25,
+                      },
                     ];
                     set("sizes", next);
                   }}
@@ -472,7 +682,7 @@ export default function ProductForm({ product }: Props) {
                           const updated = form.sizes.filter((_, i) => i !== idx);
                           set("sizes", updated);
                         }}
-                        className="mt-4 rounded-md p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition"
+                        className="mt-4 rounded-md p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition cursor-pointer"
                         title="Remove size"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -482,16 +692,16 @@ export default function ProductForm({ product }: Props) {
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-[#cfdccf] p-3 text-center text-xs text-[#5b6b60]">
-                  No custom sizes added. The product will use the base price. Click <strong>&quot;Add Size&quot;</strong> to add sizes with individual prices.
+                  No custom sizes added. The product will use the base price.
                 </div>
               )}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className={labelClass}>Overview / Short Description</label>
+                <label className={labelClass}>Overview / Description</label>
                 <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs transition">
-                  <Upload className="h-3.5 w-3.5" /> Upload File (.txt / .md)
+                  <Upload className="h-3.5 w-3.5" /> Import (.txt / .md)
                   <input
                     type="file"
                     accept=".txt,.md,.text"
@@ -517,7 +727,7 @@ export default function ProductForm({ product }: Props) {
                 Product Page Information Tabs
               </h2>
               <p className="mt-1 text-xs text-[#5b6b60]">
-                Enter text directly or click &quot;Upload file&quot; to import from any <code>.txt</code> or <code>.md</code> document. These sections will show up on the live product detail page.
+                Enter text directly (one point per line) for the product detail page tabs.
               </p>
             </div>
 
@@ -525,11 +735,13 @@ export default function ProductForm({ product }: Props) {
             <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">1</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                    1
+                  </span>
                   Benefits
                 </label>
                 <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
-                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
                     accept=".txt,.md,.text"
@@ -542,7 +754,7 @@ export default function ProductForm({ product }: Props) {
                 rows={3}
                 value={form.benefits}
                 onChange={(e) => set("benefits", e.target.value)}
-                placeholder="Enter each benefit on a new line (e.g. Relieves joint pain, 100% Herbal...)"
+                placeholder="Enter each benefit on a new line..."
                 className={inputClass}
               />
             </div>
@@ -551,11 +763,13 @@ export default function ProductForm({ product }: Props) {
             <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">2</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                    2
+                  </span>
                   How to Use
                 </label>
                 <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
-                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
                     accept=".txt,.md,.text"
@@ -577,11 +791,13 @@ export default function ProductForm({ product }: Props) {
             <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">3</span>
-                  Ingredients / Material
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                    3
+                  </span>
+                  Ingredients / Material & Care
                 </label>
                 <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
-                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
                     accept=".txt,.md,.text"
@@ -594,7 +810,7 @@ export default function ProductForm({ product }: Props) {
                 rows={3}
                 value={form.ingredients}
                 onChange={(e) => set("ingredients", e.target.value)}
-                placeholder="List ingredients or herbal composition, fabric details, etc..."
+                placeholder="List ingredients, herbal composition, or handloom care instructions..."
                 className={inputClass}
               />
             </div>
@@ -603,11 +819,13 @@ export default function ProductForm({ product }: Props) {
             <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">4</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                    4
+                  </span>
                   Return Policy
                 </label>
                 <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
-                  <Upload className="h-3.5 w-3.5" /> Upload File
+                  <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
                     accept=".txt,.md,.text"
@@ -620,81 +838,187 @@ export default function ProductForm({ product }: Props) {
                 rows={3}
                 value={form.returnPolicy}
                 onChange={(e) => set("returnPolicy", e.target.value)}
-                placeholder="Custom return, replacement, or warranty policy for this product..."
+                placeholder="Return or replacement policy for this product..."
                 className={inputClass}
               />
             </div>
           </div>
         </div>
 
-        {/* Right Column: Visuals & Badges */}
+        {/* Right Column: Multi-Image Cloudinary Uploader & Highlights */}
         <div className="space-y-5">
-          {/* 4 Photos Setup & Live Previews */}
           <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-[#F0F5EE] pb-2">
-              <label className={labelClass}>Product Photos (Up to 4)</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-[#052E1D]">
+                Product Images ({imageItems.length})
+              </label>
               <span className="text-[11px] font-semibold text-[#07552F]">
-                4 Angles / Views
+                Cloudinary Upload
               </span>
             </div>
 
             {/* Main Primary Image Preview */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F5F8F4] border border-[#E6EFE3] flex items-center justify-center">
-              {form.images[0] || form.image ? (
-                <img
-                  src={form.images[0] || form.image}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
+            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4F8F1] border border-[#E6EFE3] flex items-center justify-center">
+              {imageItems[0]?.url ? (
+                <>
+                  <img
+                    src={optimizeCloudinaryUrl(imageItems[0].url, 600)}
+                    alt="Main product preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-[#07552F] px-2.5 py-1 text-[11px] font-bold text-white shadow-xs">
+                    <Star className="h-3 w-3 fill-current" /> Main Image
+                  </span>
+                </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-[#8BA894] p-4 text-center">
+                <div className="flex flex-col items-center justify-center text-[#07552F]/70 p-4 text-center">
                   <Package className="h-10 w-10 mb-2 stroke-1" />
-                  <span className="text-xs">No primary photo set</span>
+                  <span className="text-xs font-medium">
+                    {form.name || "No product image uploaded yet"}
+                  </span>
+                  <span className="text-[11px] text-[#8BA894] mt-0.5">
+                    Shows clean placeholder on store until uploaded
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Inputs & Cloudinary Upload Components for 4 Photos */}
-            <div className="space-y-4">
-              {[0, 1, 2, 3].map((idx) => (
-                <div key={idx} className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-3 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#052E1D]">
-                      Photo #{idx + 1} {idx === 0 && "(Cover / Main)"}
-                    </span>
-                  </div>
-
-                  {/* Reusable Cloudinary ImageUpload component */}
-                  <ImageUpload
-                    initialUrl={form.images[idx] || ""}
-                    initialPublicId={form.imagePublicIds?.[idx] || ""}
-                    onUploaded={(url, publicId) => handleImageUploaded(idx, url, publicId)}
-                    onRemoved={() => handleImageRemoved(idx)}
-                  />
-
-                  <input
-                    value={form.images[idx] || ""}
-                    onChange={(e) => {
-                      const updated = [...(form.images || [])];
-                      updated[idx] = e.target.value;
-                      set("images", updated);
-                      if (idx === 0) set("image", e.target.value);
-                    }}
-                    placeholder={`Or paste image URL (e.g. https://res.cloudinary.com/...)`}
-                    className={inputClass}
-                  />
-                </div>
-              ))}
-
-              <p className="pt-1 text-[11px] text-[#8BA894]">
-                Click <strong>&quot;Upload Image&quot;</strong> to upload directly to Cloudinary (max 5 MB), or paste a URL/local path.
-              </p>
+            {/* Multi-file Upload Button */}
+            <div>
+              <label
+                className={`w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#07552F]/40 bg-[#F9FCF8] px-4 py-3 text-xs sm:text-sm font-semibold text-[#07552F] transition hover:border-[#07552F] hover:bg-[#F0F7EE] ${
+                  uploadingImages ? "pointer-events-none opacity-60" : "cursor-pointer"
+                }`}
+              >
+                {uploadingImages ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>{uploadProgressText || "Uploading to Cloudinary..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    <span>Upload Image(s) (One or Many, max 5 MB)</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingImages}
+                  onChange={handleMultiImageSelect}
+                  className="hidden"
+                />
+              </label>
             </div>
+
+            {/* Upload Error Message */}
+            {uploadError && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
+
+            {/* Uploaded Images List with Set Main, Reorder, and Remove */}
+            {imageItems.length > 0 && (
+              <div className="space-y-2.5 pt-1">
+                <p className="text-[11px] font-medium text-[#5b6b60]">
+                  First image (#1) is shown on listing pages. All images appear in the product detail gallery.
+                </p>
+
+                {imageItems.map((item, idx) => {
+                  const isMain = idx === 0;
+                  const isDeleting = deletingIdx === idx;
+
+                  return (
+                    <div
+                      key={`${item.url}-${idx}`}
+                      className={`flex items-center gap-2.5 rounded-xl border p-2.5 transition ${
+                        isMain
+                          ? "border-[#07552F] bg-[#F4F8F1]"
+                          : "border-[#E6EFE3] bg-white"
+                      }`}
+                    >
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#cfdccf] bg-[#F5F8F4]">
+                        <img
+                          src={optimizeCloudinaryUrl(item.url, 160)}
+                          alt={`Product photo ${idx + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#052E1D]">
+                            Image #{idx + 1}
+                          </span>
+                          {isMain && (
+                            <span className="rounded-full bg-[#07552F] px-2 py-0.5 text-[10px] font-bold text-white">
+                              Main
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                          {!isMain && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetMainImage(idx)}
+                              className="inline-flex items-center gap-1 rounded-md border border-[#07552F]/30 bg-white px-2 py-0.5 text-[11px] font-semibold text-[#07552F] hover:bg-[#07552F] hover:text-white transition cursor-pointer"
+                              title="Make this the main image"
+                            >
+                              <Star className="h-3 w-3" /> Set as Main
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => handleMoveImage(idx, -1)}
+                            className="rounded-md border border-gray-200 bg-white p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            title="Move up"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={idx === imageItems.length - 1}
+                            onClick={() => handleMoveImage(idx, 1)}
+                            className="rounded-md border border-gray-200 bg-white p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            title="Move down"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleRemoveImage(idx)}
+                        className="rounded-lg p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50 transition cursor-pointer"
+                        title="Remove image and delete from Cloudinary"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Visibility & Feature Badge */}
+          {/* Featured Highlighting Card */}
           <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs">
-            <label className={labelClass}>Visibility & Highlighting</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#052E1D]">
+              Homepage Highlighting
+            </label>
             <label className="mt-3 flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -704,10 +1028,10 @@ export default function ProductForm({ product }: Props) {
               />
               <div>
                 <span className="text-sm font-semibold text-[#052E1D] flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Featured Product
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Featured / Best Seller
                 </span>
                 <p className="text-xs text-[#5b6b60] mt-0.5">
-                  Promote on homepage showcase and category top spots.
+                  Feature this product in the homepage Best Sellers showcase.
                 </p>
               </div>
             </label>

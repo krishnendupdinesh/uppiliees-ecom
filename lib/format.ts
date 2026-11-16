@@ -14,3 +14,25 @@ export const getDiscount = (p?: Partial<Product> | null) => {
   }
   return Math.round(((mrp - price) / mrp) * 100);
 };
+
+// Optimize Cloudinary image URLs with f_auto, q_auto, and a sensible width for fast delivery
+export function optimizeCloudinaryUrl(url?: string | null, width = 500): string {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  // Ignore legacy non-existent local product paths so the UI shows the clean placeholder
+  if (trimmed.startsWith("/products/")) return "";
+
+  if (trimmed.includes("res.cloudinary.com") && trimmed.includes("/image/upload/")) {
+    if (trimmed.includes("/image/upload/f_auto")) {
+      return trimmed;
+    }
+    return trimmed.replace(
+      "/image/upload/",
+      `/image/upload/f_auto,q_auto,w_${width},c_limit/`
+    );
+  }
+
+  return trimmed;
+}

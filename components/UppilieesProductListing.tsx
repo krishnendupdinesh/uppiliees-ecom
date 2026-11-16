@@ -124,29 +124,44 @@ function ProductListingContent({ collection }: ProductListingProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cart, setCart] = useState<Record<string | number, number>>({});
 
-  // Sync products with API if available
+  // Keep local state synced with server-fetched collection products
   useEffect(() => {
+    setProducts(collection.products);
+  }, [collection.products]);
+
+  // Sync products with API if server list was empty
+  useEffect(() => {
+    if (collection.products && collection.products.length > 0) return;
+
     const isAll = collection.slug === "products" || collection.slug === "shop";
-    const endpoint = isAll ? "/products?limit=100" : `/products?category=${encodeURIComponent(collection.slug)}&limit=100`;
+    const endpoint = isAll
+      ? "/api/products?limit=100"
+      : `/api/products?category=${encodeURIComponent(collection.slug)}&limit=100`;
 
     api<{ products: any[] }>(endpoint)
       .then((data) => {
         if (data?.products && data.products.length > 0) {
           const mapped: Product[] = data.products.map((p) => {
-            const catSlug = p.category_slug || (p.category_name ? p.category_name.toLowerCase().replace(/\s+/g, "-") : collection.slug);
+            const catSlug =
+              p.category_slug ||
+              (p.category_name
+                ? p.category_name.toLowerCase().replace(/\s+/g, "-")
+                : collection.slug);
             const safePrice = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
-            const safeMrp = Number.isFinite(Number(p.mrp)) && Number(p.mrp) > 0 ? Number(p.mrp) : safePrice;
+            const safeMrp =
+              Number.isFinite(Number(p.mrp)) && Number(p.mrp) > 0 ? Number(p.mrp) : safePrice;
             return {
               id: p.id,
               name: p.name,
               slug: p.slug,
-              category: p.subcategory || p.category || p.category_name || (isAll ? catSlug : title),
+              category:
+                p.subcategory || p.category || p.category_name || (isAll ? catSlug : title),
               price: safePrice,
               mrp: safeMrp,
               description: p.description || undefined,
               collectionSlug: catSlug,
-              image: p.image_url || p.image || `/products/${p.slug}.jpg`,
-              images: Array.isArray(p.images) ? p.images : undefined,
+              image: p.image_url || p.image || "",
+              images: Array.isArray(p.images) ? p.images : [],
               stock: p.stock !== undefined ? Number(p.stock) : 25,
               in_stock: p.in_stock !== undefined ? Boolean(p.in_stock) : true,
             };
@@ -157,7 +172,7 @@ function ProductListingContent({ collection }: ProductListingProps) {
       .catch(() => {
         // Fall back to initial products
       });
-  }, [collection.slug, title]);
+  }, [collection.products, collection.slug, title]);
 
   useEffect(() => {
     const syncCart = () => {

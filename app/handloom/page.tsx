@@ -1,8 +1,11 @@
+import { connection } from "next/server";
 import UppilieesProductListing from "@/components/UppilieesProductListing";
-import { handloom } from "@/data/products";
+import { fetchCollectionFromDb } from "@/lib/products-db";
 
 export const dynamic = "force-dynamic";
 
-export default function TraditionalHandloomPage() {
-  return <UppilieesProductListing collection={handloom} />;
+export default async function TraditionalHandloomPage() {
+  await connection();
+  const collection = await fetchCollectionFromDb("handloom");
+  return <UppilieesProductListing collection={collection} />;
 }

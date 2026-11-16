@@ -472,16 +472,18 @@ async function seedDatabase() {
     }
     console.log(`Seeded ${SEED_CATEGORIES.length} categories.`);
 
-    // 2. Seed Products & Product Images
+    // 2. Seed Products (without fake /products/*.jpg placeholder URLs)
+    const orderByCategory = new Map<string, number>();
     for (const p of SEED_PRODUCTS) {
       const categoryId = categoryIdBySlug.get(p.categorySlug) ?? null;
-      const imageUrl = `/products/${p.slug}.jpg`;
+      const nextOrder = (orderByCategory.get(p.categorySlug) ?? 0) + 1;
+      orderByCategory.set(p.categorySlug, nextOrder);
 
       await connection.execute(
         `INSERT INTO products (
           name, slug, category_id, subcategory, description, price, mrp,
-          stock, in_stock, image_url, benefits, how_to_use, featured
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, ?, ?, ?)
+          stock, in_stock, is_active, display_order, image_url, benefits, how_to_use, featured
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, ?, NULL, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           category_id = VALUES(category_id),
@@ -489,7 +491,7 @@ async function seedDatabase() {
           description = COALESCE(products.description, VALUES(description)),
           price = VALUES(price),
           mrp = VALUES(mrp),
-          image_url = COALESCE(NULLIF(products.image_url, ''), VALUES(image_url)),
+          display_order = VALUES(display_order),
           benefits = COALESCE(products.benefits, VALUES(benefits)),
           how_to_use = COALESCE(products.how_to_use, VALUES(how_to_use)),
           featured = VALUES(featured)`,
@@ -502,31 +504,12 @@ async function seedDatabase() {
           p.price,
           p.mrp,
           p.stock,
-          imageUrl,
+          nextOrder,
           p.benefits,
           p.howToUse,
           Boolean(p.featured),
         ]
       );
-
-      const [prodRows] = await connection.execute<mysql.RowDataPacket[]>(
-        "SELECT id FROM products WHERE slug = ? LIMIT 1",
-        [p.slug]
-      );
-
-      if (prodRows[0]) {
-        const productId = Number(prodRows[0].id);
-        const [imgRows] = await connection.execute<mysql.RowDataPacket[]>(
-          "SELECT id FROM product_images WHERE product_id = ? LIMIT 1",
-          [productId]
-        );
-        if (imgRows.length === 0) {
-          await connection.execute(
-            "INSERT INTO product_images (product_id, image_url, public_id, sort_order) VALUES (?, ?, NULL, 0)",
-            [productId, imageUrl]
-          );
-        }
-      }
     }
     console.log(`Seeded ${SEED_PRODUCTS.length} products (including dried vegetables, dried meat, dried fish).`);
 

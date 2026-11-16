@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import { optimizeCloudinaryUrl } from "@/lib/format";
 
 // Configure the Cloudinary v2 SDK using server-only environment variables
 cloudinary.config({
@@ -7,6 +8,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export { cloudinary };
+export { cloudinary, optimizeCloudinaryUrl };
 export default cloudinary;
 

@@ -9,10 +9,12 @@ export default function DeleteProductButton({
   id,
   name,
   buttonStyle = "icon",
+  onDeleted,
 }: {
   id: string;
   name: string;
   buttonStyle?: "icon" | "full";
+  onDeleted?: (id: string) => void;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -24,6 +26,7 @@ export default function DeleteProductButton({
     setDeleting(true);
     try {
       await api(`/api/products/${id}`, { method: "DELETE" });
+      onDeleted?.(id);
       router.refresh();
     } catch (err: any) {
       alert(err.message || "Failed to delete product");

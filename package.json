@@ -9,7 +9,8 @@
     "lint": "eslint",
     "check-links": "node scripts/check-links.js",
     "db:init": "node --no-warnings db/init.ts",
-    "db:seed": "node --no-warnings db/seed.ts"
+    "db:seed": "node --no-warnings db/seed.ts",
+    "seed:products": "node config/seedProducts.js"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.5",

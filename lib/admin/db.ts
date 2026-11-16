@@ -35,6 +35,11 @@ function mapDbProductToAdmin(p: any): Product {
   const mrp = safeNumber(p.mrp, price);
   const stock = safeNumber(p.stock, 0);
   const inStock = p.in_stock !== undefined ? Boolean(p.in_stock) && stock > 0 : stock > 0;
+  const isActive = p.is_active !== undefined ? Boolean(p.is_active) : true;
+  const displayOrder = safeNumber(p.display_order, 0);
+
+  const validImages = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
+  const mainImage = validImages[0] || p.image_url || p.image || "";
 
   return {
     id: String(p.id),
@@ -47,14 +52,17 @@ function mapDbProductToAdmin(p: any): Product {
     mrp,
     stock,
     in_stock: inStock,
-    image: p.image_url || p.image || `/products/${p.slug}.jpg`,
+    is_active: isActive,
+    display_order: displayOrder,
+    tags: p.tags || "",
+    image: mainImage,
     publicId: p.image_public_id || p.publicId || "",
-    images: Array.isArray(p.images) && p.images.length > 0
-      ? p.images
-      : [p.image_url || p.image || `/products/${p.slug}.jpg`],
+    images: validImages,
     imagePublicIds: Array.isArray(p.imagePublicIds)
       ? p.imagePublicIds
-      : [p.image_public_id || p.publicId || ""],
+      : mainImage && (p.image_public_id || p.publicId)
+      ? [p.image_public_id || p.publicId]
+      : [],
     sizes: Array.isArray(p.sizes) ? p.sizes : [],
     description: p.description || "",
     benefits: p.benefits || "",
@@ -91,7 +99,7 @@ export async function getCategories(): Promise<Category[]> {
 export async function getProducts(): Promise<Product[]> {
   await connection();
   try {
-    const rows = await fetchProductsFromDb();
+    const rows = await fetchProductsFromDb({ includeInactive: true });
     return rows.map(mapDbProductToAdmin);
   } catch (err) {
     console.error("getProducts DB error:", err);
@@ -102,7 +110,7 @@ export async function getProducts(): Promise<Product[]> {
 export async function getProduct(id: string): Promise<Product | null> {
   await connection();
   try {
-    const p = await fetchProductByIdOrSlugFromDb(id);
+    const p = await fetchProductByIdOrSlugFromDb(id, { includeInactive: true });
     if (!p) return null;
     return mapDbProductToAdmin(p);
   } catch (err) {

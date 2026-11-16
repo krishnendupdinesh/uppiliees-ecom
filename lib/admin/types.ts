@@ -16,6 +16,9 @@ export type Product = {
   mrp: number;
   stock: number;
   in_stock: boolean;
+  is_active: boolean;
+  display_order?: number;
+  tags?: string;
   image: string;
   publicId?: string;
   images?: string[];
