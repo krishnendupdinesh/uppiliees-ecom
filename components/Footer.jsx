@@ -171,7 +171,7 @@ export default function Footer() {
               </a>
 
               <a
-                href="https://wa.me/919846000000"
+                href="https://wa.me/919847046000"
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 rounded-full bg-[#07552F] hover:bg-[#C7E900] hover:text-[#063D27] flex items-center justify-center transition-all text-[#E6EFE3]"
@@ -277,7 +277,7 @@ export default function Footer() {
             {/* Interactive Touch Contact Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2">
               <a
-                href="tel:+919846000000"
+                href="tel:+919847046000"
                 className="flex items-center gap-2.5 p-2 rounded-xl bg-[#07552F]/60 hover:bg-[#07552F] border border-[#4D9A18]/25 text-[#E6EFE3] hover:text-[#C7E900] transition-colors no-underline"
               >
                 <div className="w-7 h-7 rounded-lg bg-[#063D27] flex items-center justify-center text-[#C7E900] shrink-0">
@@ -285,12 +285,12 @@ export default function Footer() {
                 </div>
                 <div className="min-w-0 text-xs">
                   <span className="text-[10px] text-[#8BA894] block font-bold leading-none">Tap to Call</span>
-                  <span className="font-semibold truncate block mt-0.5">+91 98460 00000</span>
+                  <span className="font-semibold truncate block mt-0.5">+91 9847046000</span>
                 </div>
               </a>
 
               <a
-                href="https://wa.me/919846000000"
+                href="https://wa.me/919847046000"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2.5 p-2 rounded-xl bg-[#07552F]/60 hover:bg-[#07552F] border border-[#4D9A18]/25 text-[#E6EFE3] hover:text-[#C7E900] transition-colors no-underline"
@@ -305,7 +305,7 @@ export default function Footer() {
               </a>
 
               <a
-                href="mailto:care@uppiliees.com"
+                href="mailto:uppiliees2026@gmail.com"
                 className="flex items-center gap-2.5 p-2 rounded-xl bg-[#07552F]/60 hover:bg-[#07552F] border border-[#4D9A18]/25 text-[#E6EFE3] hover:text-[#C7E900] transition-colors no-underline"
               >
                 <div className="w-7 h-7 rounded-lg bg-[#063D27] flex items-center justify-center text-[#C7E900] shrink-0">
@@ -313,7 +313,7 @@ export default function Footer() {
                 </div>
                 <div className="min-w-0 text-xs">
                   <span className="text-[10px] text-[#8BA894] block font-bold leading-none">Email</span>
-                  <span className="font-semibold truncate block mt-0.5">care@uppiliees.com</span>
+                  <span className="font-semibold truncate block mt-0.5">uppiliees2026@gmail.com</span>
                 </div>
               </a>
             </div>

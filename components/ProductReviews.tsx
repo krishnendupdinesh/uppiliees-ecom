@@ -75,11 +75,47 @@ export default function ProductReviews({
     }
   }
 
+  const totalReviewsCount = reviews.length;
+  const avgRating =
+    totalReviewsCount > 0
+      ? (
+          reviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) /
+          totalReviewsCount
+        ).toFixed(1)
+      : null;
+
   return (
     <section className="mt-16 border-t border-gray-200 pt-12">
-      <h2 className="text-2xl sm:text-3xl font-bold text-[#063D27] mb-6">
-        Customer Reviews ({reviews.length})
-      </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#063D27]">
+            Customer Reviews ({totalReviewsCount})
+          </h2>
+          {avgRating && (
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex items-center text-amber-500">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={16}
+                    className={
+                      star <= Math.round(Number(avgRating))
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-gray-300"
+                    }
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-bold text-[#063D27]">
+                {avgRating} out of 5
+              </span>
+              <span className="text-xs text-gray-500">
+                ({totalReviewsCount} {totalReviewsCount === 1 ? "rating" : "ratings"})
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         {/* Reviews List */}

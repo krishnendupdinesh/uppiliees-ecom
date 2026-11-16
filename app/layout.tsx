@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar/Navbar";
 import Footer from "@/components/Footer";
 import SiteChrome from "@/components/SiteChrome";
+import VisitorTracker from "@/components/VisitorTracker";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${montserrat.variable} ${montserrat.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans font-normal">
+        <VisitorTracker />
         <SiteChrome>
           <Navbar />
         </SiteChrome>

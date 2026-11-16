@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
         ? Boolean(body.in_stock) && stock > 0
         : stock > 0;
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : true;
-    const displayOrder = Math.max(0, Math.floor(safeNumber(body.display_order, 0)));
 
     // Resolve category_id
     let categoryId: number | null = body.category_id ? Number(body.category_id) : null;
@@ -82,6 +81,21 @@ export async function POST(req: NextRequest) {
       );
       if (catRows[0]) {
         categoryId = Number(catRows[0].id);
+      }
+    }
+
+    // New products are placed at the top (display_order = 1) by default
+    let finalDisplayOrder = 1;
+    if (body.display_order !== undefined && Number(body.display_order) > 0) {
+      finalDisplayOrder = Math.max(1, Math.floor(safeNumber(body.display_order, 1)));
+    } else {
+      try {
+        await pool.execute(
+          "UPDATE products SET display_order = display_order + 1 WHERE category_id <=> ?",
+          [categoryId]
+        );
+      } catch {
+        // Safe fallback
       }
     }
 
@@ -152,7 +166,7 @@ export async function POST(req: NextRequest) {
         stock,
         inStock,
         isActive,
-        displayOrder,
+        finalDisplayOrder,
         tags,
         primaryImageUrl,
         primaryPublicId,

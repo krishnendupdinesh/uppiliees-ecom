@@ -97,6 +97,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (userRow.is_blocked) {
+      return NextResponse.json(
+        {
+          error: "Your account has been blocked. Please contact support.",
+          message: "Your account has been blocked. Please contact support.",
+        },
+        { status: 403 }
+      );
+    }
+
     const safeUser = {
       id: userRow.id,
       name: userRow.name,

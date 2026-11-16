@@ -15,6 +15,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
+  Tag,
+  Mail,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -22,7 +25,10 @@ const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+  { href: "/admin/coupons", label: "Coupons", icon: Tag },
+  { href: "/admin/enquiries", label: "Enquiries", icon: Mail },
   { href: "/admin/settings", label: "Settings", icon: KeyRound },
 ];
 
