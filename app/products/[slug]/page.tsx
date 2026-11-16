@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import ProductActions from "@/components/ProductActions";
 import ProductCard from "@/components/ProductCard";
@@ -457,6 +458,7 @@ export async function generateMetadata({
 }: {
   params: Params;
 }): Promise<Metadata> {
+  await connection();
   const { slug } = await params;
   let name = "";
   let description = "";
@@ -492,6 +494,7 @@ export async function generateMetadata({
 }
 
 export default async function ProductPage({ params }: { params: Params }) {
+  await connection();
   const { slug } = await params;
 
   let product: Product | null = null;

@@ -1,4 +1,5 @@
 import type { RowDataPacket } from "mysql2";
+import { connection } from "next/server";
 import pool from "@/lib/db";
 import {
   fetchProductsFromDb,
@@ -63,11 +64,12 @@ function mapDbProductToAdmin(p: any): Product {
     featured: Boolean(p.featured),
     createdAt: p.created_at
       ? new Date(p.created_at).toISOString()
-      : new Date().toISOString(),
+      : "",
   };
 }
 
 export async function getCategories(): Promise<Category[]> {
+  await connection();
   try {
     const [rows] = await pool.execute<RowDataPacket[]>(
       "SELECT id, name, slug FROM categories ORDER BY id ASC"
@@ -87,6 +89,7 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function getProducts(): Promise<Product[]> {
+  await connection();
   try {
     const rows = await fetchProductsFromDb();
     return rows.map(mapDbProductToAdmin);
@@ -97,6 +100,7 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getProduct(id: string): Promise<Product | null> {
+  await connection();
   try {
     const p = await fetchProductByIdOrSlugFromDb(id);
     if (!p) return null;
@@ -108,6 +112,7 @@ export async function getProduct(id: string): Promise<Product | null> {
 }
 
 export async function getOrders(): Promise<Order[]> {
+  await connection();
   try {
     const rows = await fetchAllOrdersFromDb();
     return rows.map((o: any) => ({
@@ -127,7 +132,7 @@ export async function getOrders(): Promise<Order[]> {
       total: safeNumber(o.total, 0),
       status: (o.status as OrderStatus) || "pending",
       paymentStatus: o.payment_status || "pending",
-      createdAt: o.createdAt || new Date().toISOString(),
+      createdAt: o.createdAt || "",
     }));
   } catch (err) {
     console.error("getOrders DB error:", err);
@@ -145,6 +150,7 @@ export async function setOrderStatus(id: string, status: OrderStatus): Promise<b
 }
 
 export async function getAdminStats() {
+  await connection();
   try {
     return await fetchAdminStatsFromDb();
   } catch {
@@ -164,6 +170,7 @@ export async function getAdminStats() {
 }
 
 export async function getUsersAndCustomers(): Promise<AdminUserRecord[]> {
+  await connection();
   try {
     // 1. Registered users from users table
     const [userRows] = await pool.execute<RowDataPacket[]>(
@@ -186,7 +193,7 @@ export async function getUsersAndCustomers(): Promise<AdminUserRecord[]> {
       isGuest: false,
       orders: safeNumber(u.orders_count, 0),
       spent: safeNumber(u.total_spent, 0),
-      createdAt: u.created_at ? new Date(u.created_at).toISOString() : new Date().toISOString(),
+      createdAt: u.created_at ? new Date(u.created_at).toISOString() : "",
     }));
 
     // 2. Guest orders (where user_id IS NULL -> non-registered users)
@@ -215,7 +222,7 @@ export async function getUsersAndCustomers(): Promise<AdminUserRecord[]> {
         spent: safeNumber(g.total_spent, 0),
         createdAt: g.last_order_at
           ? new Date(g.last_order_at).toISOString()
-          : new Date().toISOString(),
+          : "",
       }));
 
     return [...registered, ...guests];

@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import StatCard from "@/components/admin/StatCard";
 import { getAdminStats, getOrders, getProducts } from "@/lib/admin/db";
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
 export default async function DashboardContent() {
+  await connection();
   const [products, orders, stats] = await Promise.all([
     getProducts(),
     getOrders(),

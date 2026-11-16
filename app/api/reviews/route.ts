@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
@@ -18,6 +18,7 @@ async function resolveProductId(productIdOrSlug: string): Promise<number | null>
 }
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const { searchParams } = req.nextUrl;
     const rawTarget =

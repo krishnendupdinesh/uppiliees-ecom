@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 
@@ -11,6 +11,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export async function GET() {
+  await connection();
   try {
     const [rows] = await pool.execute<RowDataPacket[]>(
       "SELECT id, name, slug, subtitle FROM categories ORDER BY id ASC"

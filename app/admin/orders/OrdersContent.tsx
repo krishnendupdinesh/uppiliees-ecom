@@ -1,7 +1,9 @@
+import { connection } from "next/server";
 import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import { getOrders } from "@/lib/admin/db";
 
 export default async function OrdersContent() {
+  await connection();
   const orders = (await getOrders()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   return (
@@ -31,7 +33,7 @@ export default async function OrdersContent() {
                 <td className="px-4 py-3">
                   <div className="font-medium text-[#052E1D]">#{o.id}</div>
                   <div className="text-xs text-[#8BA894]">
-                    {new Date(o.createdAt).toLocaleDateString("en-IN")}
+                    {o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-IN") : "—"}
                   </div>
                 </td>
                 <td className="px-4 py-3">

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
@@ -6,6 +6,7 @@ import { getAuthUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const authUser = await getAuthUser(req);
     if (!authUser) {

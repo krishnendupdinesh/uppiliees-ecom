@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const authUser = await getAuthUser(req);
     if (!authUser) {

@@ -1,6 +1,8 @@
+import { connection } from "next/server";
 import { getUsersAndCustomers } from "@/lib/admin/db";
 
 export default async function CustomersContent() {
+  await connection();
   const customers = await getUsersAndCustomers();
 
   return (

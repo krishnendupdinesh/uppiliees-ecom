@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import cloudinary from "@/lib/cloudinary";
@@ -11,6 +11,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await connection();
   try {
     const { id } = await params;
     const product = await fetchProductByIdOrSlugFromDb(id);

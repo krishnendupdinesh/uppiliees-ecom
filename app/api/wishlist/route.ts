@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
@@ -25,6 +25,7 @@ async function resolveProductId(rawId: unknown): Promise<number | null> {
 }
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const user = await getAuthUser(req);
     if (!user) {

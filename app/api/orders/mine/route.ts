@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { fetchUserOrdersFromDb } from "@/lib/orders-db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const authUser = await getAuthUser(req);
     if (!authUser) {

@@ -46,7 +46,7 @@ export async function attachItemsToOrders(orderRows: RowDataPacket[]) {
     const shippingAddress = String(row.shipping_address || row.address || "");
     const createdAtIso = row.created_at
       ? new Date(row.created_at).toISOString()
-      : new Date().toISOString();
+      : "";
 
     return {
       id: String(row.id),

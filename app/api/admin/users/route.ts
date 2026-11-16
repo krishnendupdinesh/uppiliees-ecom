@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import { requireAdminUser } from "@/lib/auth";
@@ -7,6 +7,7 @@ import { safeNumber } from "@/lib/products-db";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const admin = await requireAdminUser(req);
     if (!admin) {
