@@ -6,24 +6,59 @@ import { signJwt, setAuthCookie } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+async function ensureUsersTableExists() {
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      phone VARCHAR(50) NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      role ENUM('admin', 'customer') NOT NULL DEFAULT 'customer',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_users_role (role)
+    )
+  `);
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const email = String(body.email || "").trim().toLowerCase();
-    const password = String(body.password || "");
-
-    if (!email || !password) {
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json(
-        { error: "Email and password are required." },
+        { error: "Invalid JSON request body.", message: "Invalid JSON request body." },
         { status: 400 }
       );
     }
 
-    // Look up user in TiDB using parameterized query
-    const [rows] = await pool.execute<RowDataPacket[]>(
-      "SELECT id, name, email, phone, password_hash, role FROM users WHERE email = ? LIMIT 1",
-      [email]
-    );
+    const email = String(body?.email || "").trim().toLowerCase();
+    const password = String(body?.password || "");
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required.", message: "Email and password are required." },
+        { status: 400 }
+      );
+    }
+
+    // Look up user in TiDB using SELECT * to remain compatible even if optional columns (like phone) vary
+    let rows: RowDataPacket[];
+    try {
+      const [result] = await pool.execute<RowDataPacket[]>(
+        "SELECT * FROM users WHERE email = ? LIMIT 1",
+        [email]
+      );
+      rows = result;
+    } catch (dbErr: any) {
+      if (dbErr?.code === "ER_NO_SUCH_TABLE") {
+        await ensureUsersTableExists();
+        rows = [];
+      } else {
+        throw dbErr;
+      }
+    }
 
     let userRow = rows[0];
 
@@ -33,31 +68,31 @@ export async function POST(req: NextRequest) {
     if (!userRow && adminEmail && email === adminEmail && password === adminPassword) {
       const passwordHash = await bcrypt.hash(adminPassword, 10);
       const [ins] = await pool.execute<ResultSetHeader>(
-        "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'admin')",
-        ["Uppiliees Admin", adminEmail, "9876543210", passwordHash]
+        "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
+        ["Uppiliees Admin", adminEmail, passwordHash]
       );
       userRow = {
         id: ins.insertId,
         name: "Uppiliees Admin",
         email: adminEmail,
-        phone: "9876543210",
+        phone: "",
         password_hash: passwordHash,
         role: "admin",
       } as RowDataPacket;
     }
 
-    if (!userRow) {
+    if (!userRow || !userRow.password_hash) {
       return NextResponse.json(
-        { error: "Invalid email or password." },
+        { error: "Invalid email or password.", message: "Invalid email or password." },
         { status: 401 }
       );
     }
 
     // Verify password hash with bcrypt
-    const isValid = await bcrypt.compare(password, userRow.password_hash);
+    const isValid = await bcrypt.compare(password, String(userRow.password_hash));
     if (!isValid) {
       return NextResponse.json(
-        { error: "Invalid email or password." },
+        { error: "Invalid email or password.", message: "Invalid email or password." },
         { status: 401 }
       );
     }
@@ -86,9 +121,25 @@ export async function POST(req: NextRequest) {
     setAuthCookie(response, token);
     return response;
   } catch (error: any) {
-    console.error("Login error:", error);
+    console.error("[POST /api/auth/login] Error:", {
+      message: error?.message,
+      code: error?.code,
+      errno: error?.errno,
+      sqlState: error?.sqlState,
+      stack: error?.stack,
+    });
+
+    const safeMessage =
+      error?.message && !String(error.message).toLowerCase().includes("password")
+        ? String(error.message)
+        : "Database or authentication error while logging in.";
+
     return NextResponse.json(
-      { error: error?.message || "Failed to log in." },
+      {
+        error: safeMessage,
+        message: safeMessage,
+        code: error?.code || "LOGIN_ERROR",
+      },
       { status: 500 }
     );
   }

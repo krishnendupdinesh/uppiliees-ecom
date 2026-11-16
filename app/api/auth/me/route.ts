@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [rows] = await pool.execute<RowDataPacket[]>(
-      "SELECT id, name, email, phone, role, created_at FROM users WHERE id = ? OR email = ? LIMIT 1",
+      "SELECT * FROM users WHERE id = ? OR email = ? LIMIT 1",
       [authUser.id, authUser.email]
     );
 

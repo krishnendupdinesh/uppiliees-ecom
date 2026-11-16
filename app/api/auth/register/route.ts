@@ -62,11 +62,25 @@ export async function POST(req: NextRequest) {
     // Hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert customer into TiDB
-    const [result] = await pool.execute<ResultSetHeader>(
-      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'customer')",
-      [name, email, phone, passwordHash]
-    );
+    // Insert customer into TiDB (fallback if phone column does not exist in older schema)
+    let result: ResultSetHeader;
+    try {
+      const [res] = await pool.execute<ResultSetHeader>(
+        "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'customer')",
+        [name, email, phone, passwordHash]
+      );
+      result = res;
+    } catch (insertErr: any) {
+      if (insertErr?.code === "ER_BAD_FIELD_ERROR") {
+        const [res] = await pool.execute<ResultSetHeader>(
+          "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'customer')",
+          [name, email, passwordHash]
+        );
+        result = res;
+      } else {
+        throw insertErr;
+      }
+    }
 
     const newUser = {
       id: result.insertId,

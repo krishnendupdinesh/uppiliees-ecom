@@ -96,11 +96,20 @@ export async function verifyJwt(token: string): Promise<AuthTokenPayload | null>
   }
 }
 
+function isSecureEnvironment(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    process.env.VERCEL_ENV === "production" ||
+    process.env.VERCEL_ENV === "preview"
+  );
+}
+
 // Attach an httpOnly auth cookie to a NextResponse
 export function setAuthCookie(res: NextResponse, token: string): void {
   res.cookies.set("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureEnvironment(),
     sameSite: "lax",
     path: "/",
     maxAge: TOKEN_MAX_AGE,
@@ -111,7 +120,7 @@ export function setAuthCookie(res: NextResponse, token: string): void {
 export function clearAuthCookie(res: NextResponse): void {
   res.cookies.set("token", "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureEnvironment(),
     sameSite: "lax",
     path: "/",
     expires: new Date(0),

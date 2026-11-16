@@ -1,10 +1,13 @@
 import mysql from "mysql2/promise";
 
-// Resolve target database name (avoid MySQL/TiDB reserved system schema 'sys')
+const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
+
 export function getDatabaseName(): string {
-  const raw = (process.env.TIDB_DATABASE || "uppiliees").trim();
+  const raw = (process.env.TIDB_DATABASE || "").trim();
   if (!raw || raw.toLowerCase() === "sys") {
-    return "uppiliees";
+    throw new Error(
+      "Missing or invalid TIDB_DATABASE environment variable (cannot be empty or 'sys')."
+    );
   }
   return raw;
 }
@@ -17,12 +20,42 @@ const globalForDb = globalThis as unknown as {
 
 export function getPool(): mysql.Pool {
   if (!globalForDb.pool) {
+    const host = (process.env.TIDB_HOST || "").trim();
+    const portRaw = (process.env.TIDB_PORT || "").trim();
+    const user = (process.env.TIDB_USER || "").trim();
+    const password = process.env.TIDB_PASSWORD || "";
+    const database = getDatabaseName();
+
+    const missing: string[] = [];
+    if (!host) missing.push("TIDB_HOST");
+    if (!portRaw) missing.push("TIDB_PORT");
+    if (!user) missing.push("TIDB_USER");
+    if (!password) missing.push("TIDB_PASSWORD");
+    if (!database) missing.push("TIDB_DATABASE");
+
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing required TiDB environment variable(s): ${missing.join(", ")}`
+      );
+    }
+
+    if (LOCALHOST_HOSTS.has(host.toLowerCase())) {
+      throw new Error(
+        `Invalid TIDB_HOST "${host}": TiDB Cloud host is required (localhost fallback is disabled).`
+      );
+    }
+
+    const port = Number(portRaw);
+    if (!Number.isInteger(port) || port <= 0) {
+      throw new Error(`Invalid TIDB_PORT "${portRaw}": must be a valid port number.`);
+    }
+
     globalForDb.pool = mysql.createPool({
-      host: process.env.TIDB_HOST,
-      port: Number(process.env.TIDB_PORT || 4000),
-      user: process.env.TIDB_USER,
-      password: process.env.TIDB_PASSWORD,
-      database: getDatabaseName(),
+      host,
+      port,
+      user,
+      password,
+      database,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
