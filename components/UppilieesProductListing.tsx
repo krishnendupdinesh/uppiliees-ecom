@@ -134,15 +134,21 @@ function ProductListingContent({ collection }: ProductListingProps) {
         if (data?.products && data.products.length > 0) {
           const mapped: Product[] = data.products.map((p) => {
             const catSlug = p.category_slug || (p.category_name ? p.category_name.toLowerCase().replace(/\s+/g, "-") : collection.slug);
+            const safePrice = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
+            const safeMrp = Number.isFinite(Number(p.mrp)) && Number(p.mrp) > 0 ? Number(p.mrp) : safePrice;
             return {
               id: p.id,
               name: p.name,
               slug: p.slug,
-              category: p.category_name || p.category || (isAll ? catSlug : title),
-              price: Number(p.price),
-              mrp: Number(p.mrp),
+              category: p.subcategory || p.category || p.category_name || (isAll ? catSlug : title),
+              price: safePrice,
+              mrp: safeMrp,
               description: p.description || undefined,
               collectionSlug: catSlug,
+              image: p.image_url || p.image || `/products/${p.slug}.jpg`,
+              images: Array.isArray(p.images) ? p.images : undefined,
+              stock: p.stock !== undefined ? Number(p.stock) : 25,
+              in_stock: p.in_stock !== undefined ? Boolean(p.in_stock) : true,
             };
           });
           setProducts(mapped);

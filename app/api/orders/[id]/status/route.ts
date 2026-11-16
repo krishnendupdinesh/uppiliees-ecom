@@ -1,54 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateStoredOrderStatus } from "@/lib/db";
+import type { ResultSetHeader } from "mysql2";
+import pool from "@/lib/db";
+import { requireAdminUser } from "@/lib/auth";
 
-async function verifyJwt(token: string, secret: string): Promise<any | null> {
+const VALID_STATUSES = [
+  "pending",
+  "packed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+async function updateStatusHandler(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const [headerB64, payloadB64, signatureB64] = parts;
+    const admin = await requireAdminUser(req);
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Forbidden: Admin access required." },
+        { status: 403 }
+      );
+    }
 
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
+    const { id } = await params;
+    const body = await req.json();
+    const status = String(body.status || "").trim().toLowerCase();
+
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { error: `Invalid order status. Allowed: ${VALID_STATUSES.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const [result] = await pool.execute<ResultSetHeader>(
+      "UPDATE orders SET status = ? WHERE id = ?",
+      [status, id]
     );
 
-    const b64 = signatureB64.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
-    const rawSig = Uint8Array.from(atob(b64 + pad), (c) => c.charCodeAt(0));
-    const data = enc.encode(`${headerB64}.${payloadB64}`);
-    const valid = await crypto.subtle.verify("HMAC", key, rawSig, data);
-    if (!valid) return null;
+    if (result.affectedRows === 0) {
+      return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    }
 
-    const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(payloadJson);
-    if (payload.exp && Date.now() >= payload.exp * 1000) return null;
-    return payload;
-  } catch {
-    return null;
+    return NextResponse.json({
+      success: true,
+      id,
+      status,
+      message: "Order status updated successfully.",
+    });
+  } catch (error: any) {
+    console.error("PATCH /api/orders/[id]/status error:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to update order status." },
+      { status: 500 }
+    );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = req.cookies.get("token")?.value;
-  const secret = process.env.JWT_SECRET || "supersecretjwtkey_change_in_production_123456";
-  const user = token ? await verifyJwt(token, secret) : null;
-
-  if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { id } = await params;
-  const { status } = await req.json();
-
-  const ok = updateStoredOrderStatus(id, status);
-  if (!ok) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ success: true, status });
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return updateStatusHandler(req, context);
 }
 
+export async function PUT(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return updateStatusHandler(req, context);
+}

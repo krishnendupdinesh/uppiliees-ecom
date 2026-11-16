@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* Allow next/image to load optimized images from Cloudinary (res.cloudinary.com) */
   images: {
     remotePatterns: [
       {

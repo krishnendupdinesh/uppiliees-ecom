@@ -318,16 +318,17 @@ export default function BestSellersSection({
       .then((data) => {
         if (data?.products && data.products.length > 0) {
           const mapped: BestSellerProduct[] = data.products.map((p) => {
-            const catSlug = p.category_slug || (p.category_name ? p.category_name.toLowerCase().replace(/\s+/g, "-") : "products");
+            const safePrice = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
+            const safeMrp = Number.isFinite(Number(p.mrp)) ? Number(p.mrp) : safePrice;
             return {
               id: p.id,
               name: p.name,
               description: p.description || "",
-              price: Number(p.price),
-              originalPrice: Number(p.mrp) > Number(p.price) ? Number(p.mrp) : undefined,
-              image: p.image || `/products/${p.slug}.jpg`,
+              price: safePrice,
+              originalPrice: safeMrp > safePrice ? safeMrp : undefined,
+              image: p.image_url || p.image || `/products/${p.slug}.jpg`,
               alt: p.name,
-              href: `/${catSlug}/${p.slug}`,
+              href: `/products/${p.slug}`,
             };
           });
           setItems(mapped);

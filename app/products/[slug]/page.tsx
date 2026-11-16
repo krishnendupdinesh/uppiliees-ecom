@@ -7,6 +7,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductImage from "@/components/ProductImage";
 import ProductGallery from "@/components/ProductGallery";
 import ProductTabs, { type ProductTab } from "@/components/ProductTabs";
+import ProductReviews from "@/components/ProductReviews";
 import WishlistButton from "@/components/WishlistButton";
 
 import {
@@ -18,7 +19,11 @@ import {
 } from "@/data/products";
 
 import { formatPrice, getDiscount } from "@/lib/format";
-import { api } from "@/lib/api";
+import {
+  fetchProductByIdOrSlugFromDb,
+  fetchProductsFromDb,
+  safeNumber,
+} from "@/lib/products-db";
 
 export const instant = false;
 
@@ -465,12 +470,16 @@ export async function generateMetadata({
   let description = "";
 
   try {
-    const apiProduct = await api<any>(`/products/${slug}`);
-    if (apiProduct) {
-      name = apiProduct.name;
-      description = apiProduct.description || "";
+    const dbProduct = await fetchProductByIdOrSlugFromDb(slug);
+    if (dbProduct) {
+      name = dbProduct.name;
+      description = dbProduct.description || "";
     }
   } catch {
+    // fall back to static lookup
+  }
+
+  if (!name) {
     const found = findProductBySlug(slug);
     if (found) {
       name = found.product.name;
@@ -495,22 +504,29 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   let product: Product | null = null;
   let collection: Collection | null = null;
+  let dbDetails: any = null;
 
   try {
-    const apiProduct = await api<any>(`/products/${slug}`);
+    const apiProduct = await fetchProductByIdOrSlugFromDb(slug);
     if (apiProduct) {
-      const catSlug = apiProduct.category_slug || "products";
+      dbDetails = apiProduct;
+      const catSlug = apiProduct.category_slug || "herbal-beauty";
+      const safePrice = safeNumber(apiProduct.price, 0);
+      const safeMrp = safeNumber(apiProduct.mrp, safePrice);
       product = {
         id: apiProduct.id,
         name: apiProduct.name,
         slug: apiProduct.slug,
-        category: apiProduct.category_name || apiProduct.category || "General",
-        price: Number(apiProduct.price),
-        mrp: Number(apiProduct.mrp),
+        category: apiProduct.subcategory || apiProduct.category_name || "General",
+        price: safePrice,
+        mrp: safeMrp,
         description: apiProduct.description || undefined,
         collectionSlug: catSlug,
+        image: apiProduct.image_url || apiProduct.image,
+        images: apiProduct.images,
+        stock: apiProduct.stock,
+        in_stock: apiProduct.in_stock,
       };
-      (product as any).image = apiProduct.image;
       collection =
         collections.find((c) => c.slug === catSlug) || {
           slug: catSlug,
@@ -523,16 +539,6 @@ export default async function ProductPage({ params }: { params: Params }) {
   } catch {
     // fall back to static data
   }
-
-  // Look for custom products store info if available
-  let customDetails: any = null;
-  try {
-    const { getCustomProducts } = await import("@/lib/admin/productsStore");
-    const customList = getCustomProducts();
-    customDetails = customList.find(
-      (cp) => cp.id === slug || cp.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug
-    );
-  } catch {}
 
   if (!product || !collection) {
     const found = findProductBySlug(slug);
@@ -557,44 +563,49 @@ export default async function ProductPage({ params }: { params: Params }) {
   // Related products
   let others: Product[] = [];
   try {
-    const relatedRes = await api<{ products: any[] }>(
-      `/products?category=${encodeURIComponent(collection.slug)}&limit=10`
-    );
-    if (relatedRes?.products) {
-      others = relatedRes.products
-        .filter((item) => String(item.id) !== String(product!.id))
+    const relatedRows = await fetchProductsFromDb({ category: collection.slug });
+    if (relatedRows.length > 0) {
+      others = relatedRows
+        .filter((item) => String(item.id) !== String(product!.id) && item.slug !== product!.slug)
         .map((p) => ({
           id: p.id,
           name: p.name,
           slug: p.slug,
-          category: p.category_name || p.category || "General",
-          price: Number(p.price),
-          mrp: Number(p.mrp),
+          category: p.subcategory || p.category_name || "General",
+          price: safeNumber(p.price, 0),
+          mrp: safeNumber(p.mrp, safeNumber(p.price, 0)),
           description: p.description || undefined,
           collectionSlug: p.category_slug || collection!.slug,
-          image: p.image,
+          image: p.image_url || p.image,
+          images: p.images,
+          stock: p.stock,
+          in_stock: p.in_stock,
         }));
     }
   } catch {
     others = collection.products.filter((item) => item.id !== product!.id);
   }
 
+  if (others.length === 0) {
+    others = collection.products.filter((item) => item.slug !== product!.slug);
+  }
+
   const related = others.slice(0, 8);
 
-  const customBenefits = customDetails?.benefits?.trim()
-    ? customDetails.benefits.split("\n").map((s: string) => s.trim()).filter(Boolean)
+  const customBenefits = dbDetails?.benefits?.trim()
+    ? dbDetails.benefits.split("\n").map((s: string) => s.trim()).filter(Boolean)
     : null;
 
-  const customHowToUse = customDetails?.howToUse?.trim()
-    ? customDetails.howToUse.split("\n").map((s: string) => s.trim()).filter(Boolean)
+  const customHowToUse = dbDetails?.howToUse?.trim()
+    ? dbDetails.howToUse.split("\n").map((s: string) => s.trim()).filter(Boolean)
     : null;
 
-  const customIngredients = customDetails?.ingredients?.trim()
-    ? customDetails.ingredients.split("\n").map((s: string) => s.trim()).filter(Boolean)
+  const customIngredients = dbDetails?.ingredients?.trim()
+    ? dbDetails.ingredients.split("\n").map((s: string) => s.trim()).filter(Boolean)
     : null;
 
-  const customReturnPolicy = customDetails?.returnPolicy?.trim()
-    ? customDetails.returnPolicy.split("\n").map((s: string) => s.trim()).filter(Boolean)
+  const customReturnPolicy = dbDetails?.returnPolicy?.trim()
+    ? dbDetails.returnPolicy.split("\n").map((s: string) => s.trim()).filter(Boolean)
     : null;
 
   const benefitsList = customBenefits || (info.benefits?.length
@@ -646,14 +657,14 @@ export default async function ProductPage({ params }: { params: Params }) {
     },
   ];
 
-  // Merge multiple images from custom details if available
-  if (customDetails?.images && Array.isArray(customDetails.images)) {
-    (product as any).images = customDetails.images;
+  // Merge multiple images from database details if available
+  if (dbDetails?.images && Array.isArray(dbDetails.images) && dbDetails.images.length > 0) {
+    (product as any).images = dbDetails.images;
   }
-  const customSizes = customDetails?.sizes && Array.isArray(customDetails.sizes) ? customDetails.sizes : [];
+  const customSizes = dbDetails?.sizes && Array.isArray(dbDetails.sizes) ? dbDetails.sizes : [];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 pb-20 sm:pb-8">
+    <div className="min-h-screen bg-white text-gray-900 pb-8">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb */}
         <nav className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-8">
@@ -764,6 +775,9 @@ export default async function ProductPage({ params }: { params: Params }) {
             <ProductTabs tabs={tabs} />
           </div>
         </section>
+
+        {/* Customer Reviews */}
+        <ProductReviews productId={product.id} slug={product.slug} />
 
         {/* Related Products */}
         {related.length > 0 && (

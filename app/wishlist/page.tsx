@@ -122,8 +122,11 @@ function addToCartStorage(product: WishlistItem) {
   writeList(CART_STORAGE_KEY, CART_EVENT, next);
 }
 
-const formatPrice = (n: number) =>
-  `${PAGE_TEXT.currency}${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatPrice = (n: number | undefined | null) => {
+  const safe = Number(n ?? 0);
+  const valid = Number.isFinite(safe) ? safe : 0;
+  return `${PAGE_TEXT.currency}${valid.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+};
 
 /* ═══════════════════════════════════════════════════════════════
    3. ICONS
@@ -316,6 +319,21 @@ export default function WishlistPage() {
 
   useEffect(() => {
     loadWishlist();
+
+    // Sync from database wishlist if user is logged in
+    fetch("/api/wishlist", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
+          const local = readWishlist();
+          if (local.length === 0) {
+            setItems(data.items);
+            writeWishlist(data.items);
+          }
+        }
+      })
+      .catch(() => {});
+
     window.addEventListener(WISHLIST_EVENT, loadWishlist);
     window.addEventListener("storage", loadWishlist);
     return () => {
@@ -328,11 +346,22 @@ export default function WishlistPage() {
     const next = items.filter((i) => String(i.id) !== String(item.id));
     setItems(next);
     writeWishlist(next);
+    fetch(`/api/wishlist?productId=${encodeURIComponent(String(item.id))}`, {
+      method: "DELETE",
+    }).catch(() => {});
     setNotice(`${item.name} was removed from your wishlist.`);
   };
 
   const addOne = (item: WishlistItem) => {
     addToCartStorage(item);
+    fetch("/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: item.id, quantity: 1, mode: "add" }),
+    }).catch(() => {});
+    fetch(`/api/wishlist?productId=${encodeURIComponent(String(item.id))}`, {
+      method: "DELETE",
+    }).catch(() => {});
     // Remove moved product from wishlist
     const next = items.filter((i) => String(i.id) !== String(item.id));
     setItems(next);
@@ -341,7 +370,15 @@ export default function WishlistPage() {
   };
 
   const addAll = () => {
-    items.forEach(addToCartStorage);
+    items.forEach((item) => {
+      addToCartStorage(item);
+      fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: item.id, quantity: 1, mode: "add" }),
+      }).catch(() => {});
+    });
+    fetch("/api/wishlist", { method: "DELETE" }).catch(() => {});
     // Clear wishlist as all items moved to cart
     setItems([]);
     writeWishlist([]);
@@ -351,6 +388,7 @@ export default function WishlistPage() {
   const clearAll = () => {
     setItems([]);
     writeWishlist([]);
+    fetch("/api/wishlist", { method: "DELETE" }).catch(() => {});
     setNotice("Your wishlist was cleared.");
   };
 

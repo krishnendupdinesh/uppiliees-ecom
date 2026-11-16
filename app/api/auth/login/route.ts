@@ -1,121 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findUserByEmail, verifyPassword } from "@/lib/db";
-
-// Standard Web Crypto HMAC-SHA256 JWT signer
-async function signJwt(payload: Record<string, any>, secret: string): Promise<string> {
-  const enc = new TextEncoder();
-  const header = { alg: "HS256", typ: "JWT" };
-  const b64 = (obj: any) =>
-    btoa(JSON.stringify(obj))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-  const headerB64 = b64(header);
-  const payloadB64 = b64(payload);
-  const data = enc.encode(`${headerB64}.${payloadB64}`);
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const sigBuffer = await crypto.subtle.sign("HMAC", key, data);
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sigBuffer)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  return `${headerB64}.${payloadB64}.${sigB64}`;
-}
+import bcrypt from "bcryptjs";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import pool from "@/lib/db";
+import { signJwt, setAuthCookie } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
 
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@uppiliees.com";
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123456";
-    const jwtSecret = process.env.JWT_SECRET || "supersecretjwtkey_change_in_production_123456";
-
-    // 1. Check Admin Credentials
-    if (
-      email?.toLowerCase() === adminEmail.toLowerCase() &&
-      password === adminPassword
-    ) {
-      const token = await signJwt(
-        {
-          id: "admin-master",
-          email: adminEmail,
-          name: "Administrator",
-          role: "admin",
-          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
-        },
-        jwtSecret
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required." },
+        { status: 400 }
       );
-
-      const response = NextResponse.json({
-        success: true,
-        role: "admin",
-        user: { id: "admin-master", name: "Administrator", email: adminEmail, role: "admin" },
-      });
-
-      // Set auth cookie
-      response.cookies.set("token", token, {
-        httpOnly: false,
-        path: "/",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-      });
-
-      return response;
     }
 
-    // 2. Check Customer Credentials
-    const customer = findUserByEmail(email || "");
-    if (customer && verifyPassword(password || "", customer.passwordHash)) {
-      const token = await signJwt(
-        {
-          id: customer.id,
-          email: customer.email,
-          name: customer.name,
-          role: "customer",
-          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
-        },
-        jwtSecret
-      );
-
-      const response = NextResponse.json({
-        success: true,
-        role: "customer",
-        user: {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          role: "customer",
-        },
-      });
-
-      response.cookies.set("token", token, {
-        httpOnly: false,
-        path: "/",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-      });
-
-      return response;
-    }
-
-    return NextResponse.json(
-      { error: "Invalid email or password." },
-      { status: 401 }
+    // Look up user in TiDB using parameterized query
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      "SELECT id, name, email, phone, password_hash, role FROM users WHERE email = ? LIMIT 1",
+      [email]
     );
+
+    let userRow = rows[0];
+
+    // If admin logs in with env credentials and hasn't been seeded yet, create admin row in TiDB
+    const adminEmail = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+    const adminPassword = process.env.ADMIN_PASSWORD || "";
+    if (!userRow && adminEmail && email === adminEmail && password === adminPassword) {
+      const passwordHash = await bcrypt.hash(adminPassword, 10);
+      const [ins] = await pool.execute<ResultSetHeader>(
+        "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'admin')",
+        ["Uppiliees Admin", adminEmail, "9876543210", passwordHash]
+      );
+      userRow = {
+        id: ins.insertId,
+        name: "Uppiliees Admin",
+        email: adminEmail,
+        phone: "9876543210",
+        password_hash: passwordHash,
+        role: "admin",
+      } as RowDataPacket;
+    }
+
+    if (!userRow) {
+      return NextResponse.json(
+        { error: "Invalid email or password." },
+        { status: 401 }
+      );
+    }
+
+    // Verify password hash with bcrypt
+    const isValid = await bcrypt.compare(password, userRow.password_hash);
+    if (!isValid) {
+      return NextResponse.json(
+        { error: "Invalid email or password." },
+        { status: 401 }
+      );
+    }
+
+    const safeUser = {
+      id: userRow.id,
+      name: userRow.name,
+      email: userRow.email,
+      phone: userRow.phone || "",
+      role: (userRow.role === "admin" ? "admin" : "customer") as "admin" | "customer",
+    };
+
+    const token = await signJwt({
+      id: safeUser.id,
+      name: safeUser.name,
+      email: safeUser.email,
+      role: safeUser.role,
+    });
+
+    const response = NextResponse.json({
+      success: true,
+      role: safeUser.role,
+      user: safeUser,
+    });
+
+    setAuthCookie(response, token);
+    return response;
   } catch (error: any) {
+    console.error("Login error:", error);
     return NextResponse.json(
-      { error: error?.message || "Internal server error" },
+      { error: error?.message || "Failed to log in." },
       { status: 500 }
     );
   }

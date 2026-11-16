@@ -55,8 +55,11 @@ export function getCartTotalCount(): number {
 }
 
 export function addToCart(item: Omit<CartItem, "qty">, qty: number = 1): void {
+  const safePrice = Number.isFinite(Number(item.price)) ? Number(item.price) : 0;
+  const normalizedItem = { ...item, price: safePrice };
+
   const items = getCart();
-  const existingIndex = items.findIndex((i) => String(i.id) === String(item.id));
+  const existingIndex = items.findIndex((i) => String(i.id) === String(normalizedItem.id));
 
   let updated: CartItem[];
   if (existingIndex > -1) {
@@ -66,9 +69,18 @@ export function addToCart(item: Omit<CartItem, "qty">, qty: number = 1): void {
       return { ...i, qty: newQty };
     });
   } else {
-    updated = [...items, { ...item, qty: Math.min(MAX_QTY, Math.max(1, qty)) }];
+    updated = [...items, { ...normalizedItem, qty: Math.min(MAX_QTY, Math.max(1, qty)) }];
   }
   saveCart(updated);
+
+  // Sync with database cart for logged-in users
+  if (typeof window !== "undefined") {
+    fetch("/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: normalizedItem.id, quantity: qty, mode: "add" }),
+    }).catch(() => {});
+  }
 }
 
 export function updateCartItemQty(id: number | string, qty: number): void {
@@ -82,10 +94,29 @@ export function updateCartItemQty(id: number | string, qty: number): void {
     );
   }
   saveCart(updated);
+
+  if (typeof window !== "undefined") {
+    if (qty <= 0) {
+      fetch(`/api/cart?productId=${encodeURIComponent(String(id))}`, {
+        method: "DELETE",
+      }).catch(() => {});
+    } else {
+      fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: id, quantity: qty, mode: "set" }),
+      }).catch(() => {});
+    }
+  }
 }
 
 export function removeFromCart(id: number | string): void {
   const items = getCart();
   saveCart(items.filter((i) => String(i.id) !== String(id)));
-}
 
+  if (typeof window !== "undefined") {
+    fetch(`/api/cart?productId=${encodeURIComponent(String(id))}`, {
+      method: "DELETE",
+    }).catch(() => {});
+  }
+}

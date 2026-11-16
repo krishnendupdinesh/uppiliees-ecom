@@ -49,7 +49,7 @@ const API = {
   login: "/api/auth/login",
   register: "/api/auth/register",
   logout: "/api/auth/logout",
-  updateProfile: "",
+  updateProfile: "/api/auth/me",
   orders: "/api/orders/my",
   addAddress: "",
   changePassword: "/api/auth/change-password",
@@ -110,8 +110,11 @@ function errorText(err: unknown, fallback: string) {
   return err.message || fallback;
 }
 
-const formatPrice = (n: number) =>
-  `${PAGE_TEXT.currency}${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatPrice = (n: number | undefined | null) => {
+  const safe = Number(n ?? 0);
+  const valid = Number.isFinite(safe) ? safe : 0;
+  return `${PAGE_TEXT.currency}${valid.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+};
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);

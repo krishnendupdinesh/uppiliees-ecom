@@ -1,6 +1,14 @@
-import { cookies } from "next/headers";
-import { api } from "@/lib/api";
-import { getStoredOrders, updateStoredOrderStatus } from "@/lib/db";
+import type { RowDataPacket } from "mysql2";
+import pool from "@/lib/db";
+import {
+  fetchProductsFromDb,
+  fetchProductByIdOrSlugFromDb,
+  safeNumber,
+} from "@/lib/products-db";
+import {
+  fetchAllOrdersFromDb,
+  fetchAdminStatsFromDb,
+} from "@/lib/orders-db";
 import type { Order, OrderStatus, Product } from "./types";
 
 export interface Category {
@@ -9,203 +17,210 @@ export interface Category {
   slug: string;
 }
 
-// Builds request headers forwarding browser cookies during Next.js server rendering
-async function getServerAuthHeaders(): Promise<Record<string, string>> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-    if (token) {
-      return { Cookie: `token=${token}` };
-    }
-  } catch {
-    // Called outside request scope
-  }
-  return {};
+export interface AdminUserRecord {
+  id: string | number;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  isGuest: boolean;
+  orders: number;
+  spent: number;
+  createdAt: string;
+}
+
+function mapDbProductToAdmin(p: any): Product {
+  const price = safeNumber(p.price, 0);
+  const mrp = safeNumber(p.mrp, price);
+  const stock = safeNumber(p.stock, 0);
+  const inStock = p.in_stock !== undefined ? Boolean(p.in_stock) && stock > 0 : stock > 0;
+
+  return {
+    id: String(p.id),
+    name: p.name || "",
+    slug: p.slug || "",
+    category: p.category_name || p.category || "Herbal & Beauty",
+    category_id: p.category_id ? Number(p.category_id) : undefined,
+    subcategory: p.subcategory || p.category || "",
+    price,
+    mrp,
+    stock,
+    in_stock: inStock,
+    image: p.image_url || p.image || `/products/${p.slug}.jpg`,
+    publicId: p.image_public_id || p.publicId || "",
+    images: Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : [p.image_url || p.image || `/products/${p.slug}.jpg`],
+    imagePublicIds: Array.isArray(p.imagePublicIds)
+      ? p.imagePublicIds
+      : [p.image_public_id || p.publicId || ""],
+    sizes: Array.isArray(p.sizes) ? p.sizes : [],
+    description: p.description || "",
+    benefits: p.benefits || "",
+    howToUse: p.howToUse || p.how_to_use || "",
+    ingredients: p.ingredients || "",
+    returnPolicy: p.returnPolicy || p.return_policy || "",
+    featured: Boolean(p.featured),
+    createdAt: p.created_at
+      ? new Date(p.created_at).toISOString()
+      : new Date().toISOString(),
+  };
 }
 
 export async function getCategories(): Promise<Category[]> {
   try {
-    return await api<Category[]>("/api/categories");
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      "SELECT id, name, slug FROM categories ORDER BY id ASC"
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      name: String(r.name),
+      slug: String(r.slug),
+    }));
   } catch {
-    return [];
+    return [
+      { id: 1, name: "Herbal & Beauty", slug: "herbal-beauty" },
+      { id: 2, name: "Traditional Food", slug: "traditional-foods" },
+      { id: 3, name: "Handloom", slug: "handloom" },
+    ];
   }
 }
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const res = await api<{ products: any[] }>("/api/products?limit=1000");
-    if (res?.products && Array.isArray(res.products) && res.products.length > 0) {
-      return res.products.map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        category: p.category_name || p.category_slug || p.category || "Herbal & Beauty",
-        price: Number(p.price || 0),
-        mrp: Number(p.mrp || p.price || 0),
-        stock: Number(p.stock ?? 0),
-        image: p.image_url || p.image || "",
-        images: Array.isArray(p.images) ? p.images : p.image_url ? [p.image_url] : [],
-        sizes: Array.isArray(p.sizes) ? p.sizes : [],
-        description: p.description || "",
-        benefits: p.benefits || "",
-        howToUse: p.howToUse || p.how_to_use || "",
-        ingredients: p.ingredients || "",
-        returnPolicy: p.returnPolicy || p.return_policy || "",
-        featured: Boolean(p.featured),
-        createdAt: p.created_at || p.createdAt || new Date().toISOString(),
-      }));
-    }
-  } catch {
-    // Backend API not reachable or empty; fall through to local catalog
-  }
-
-  // Static catalog + custom products fallback
-  try {
-    const { collections } = await import("@/data/products");
-    const { getCustomProducts } = await import("./productsStore");
-    const custom = getCustomProducts();
-
-    const staticList = collections.flatMap((c) =>
-      c.products.map((p) => ({
-        id: `${c.slug}-${p.id}`,
-        name: p.name,
-        category: p.category || c.title,
-        price: Number(p.price || 0),
-        mrp: Number(p.mrp || p.price || 0),
-        stock: 25,
-        image: `/products/${p.slug}.jpg`,
-        description: p.description || "",
-        featured: true,
-        createdAt: new Date().toISOString(),
-      }))
-    );
-
-    const combined = [...custom];
-    for (const item of staticList) {
-      if (!combined.some((c) => c.id === item.id)) {
-        combined.push(item);
-      }
-    }
-
-    return combined;
-  } catch {
+    const rows = await fetchProductsFromDb();
+    return rows.map(mapDbProductToAdmin);
+  } catch (err) {
+    console.error("getProducts DB error:", err);
     return [];
   }
 }
 
 export async function getProduct(id: string): Promise<Product | null> {
   try {
-    const p = await api<any>(`/api/products/${encodeURIComponent(id)}`);
-    if (p && p.id) {
-      return {
-        id: String(p.id),
-        name: p.name,
-        category: p.category_name || p.category_slug || p.category || "Herbal & Beauty",
-        price: Number(p.price || 0),
-        mrp: Number(p.mrp || p.price || 0),
-        stock: Number(p.stock ?? 0),
-        image: p.image_url || p.image || "",
-        images: Array.isArray(p.images) ? p.images : p.image_url ? [p.image_url] : [],
-        sizes: Array.isArray(p.sizes) ? p.sizes : [],
-        description: p.description || "",
-        benefits: p.benefits || "",
-        howToUse: p.howToUse || p.how_to_use || "",
-        ingredients: p.ingredients || "",
-        returnPolicy: p.returnPolicy || p.return_policy || "",
-        featured: Boolean(p.featured),
-        createdAt: p.created_at || p.createdAt || new Date().toISOString(),
-      };
-    }
-  } catch {
-    // Fall back to list lookup
+    const p = await fetchProductByIdOrSlugFromDb(id);
+    if (!p) return null;
+    return mapDbProductToAdmin(p);
+  } catch (err) {
+    console.error("getProduct DB error:", err);
+    return null;
   }
-
-  const products = await getProducts();
-  return products.find((p) => p.id === id) || null;
 }
 
 export async function getOrders(): Promise<Order[]> {
   try {
-    const headers = await getServerAuthHeaders();
-    const res = await api<any[]>("/api/orders", { headers });
-    if (Array.isArray(res)) {
-      return res.map((o) => {
-        const isGuest = o.user_id === null || o.is_guest === true;
-        const rawCustomer = o.customer_name || o.customerName || o.guest_name || "Guest";
-        const customerLabel = isGuest
-          ? rawCustomer.toLowerCase().includes("guest")
-            ? rawCustomer
-            : `${rawCustomer} (Guest)`
-          : rawCustomer;
-
-        return {
-          id: String(o.id),
-          customerName: customerLabel,
-          email: o.email || o.guest_email || "",
-          phone: o.phone || o.guest_phone || "",
-          address: o.address || "",
-          items: (o.items || []).map((i: any) => ({
-            name: i.name,
-            qty: Number(i.quantity ?? i.qty ?? 1),
-            price: Number(i.price || 0),
-          })),
-          total: Number(o.total || 0),
-          status: (o.status as OrderStatus) || "pending",
-          createdAt: o.created_at || o.createdAt || new Date().toISOString(),
-        };
-      });
-    }
-  } catch {
-    // Backend API not reachable; read from local stored orders
+    const rows = await fetchAllOrdersFromDb();
+    return rows.map((o: any) => ({
+      id: String(o.id),
+      userId: o.user_id,
+      isGuest: Boolean(o.is_guest),
+      customerType: o.is_guest ? "Non-registered" : "Registered",
+      customerName: o.customerName,
+      email: o.email || "",
+      phone: o.phone || "",
+      address: o.shipping_address || o.address || "",
+      items: (o.items || []).map((i: any) => ({
+        name: i.name,
+        qty: safeNumber(i.quantity ?? i.qty, 1),
+        price: safeNumber(i.price, 0),
+      })),
+      total: safeNumber(o.total, 0),
+      status: (o.status as OrderStatus) || "pending",
+      paymentStatus: o.payment_status || "pending",
+      createdAt: o.createdAt || new Date().toISOString(),
+    }));
+  } catch (err) {
+    console.error("getOrders DB error:", err);
+    return [];
   }
-
-  const localOrders = getStoredOrders();
-  return localOrders.map((o) => ({
-    id: o.id,
-    customerName: o.isGuest && !o.customerName.toLowerCase().includes("guest")
-      ? `${o.customerName} (Guest)`
-      : o.customerName,
-    email: o.email,
-    phone: o.phone,
-    address: o.address,
-    items: o.items.map((i) => ({
-      name: i.name,
-      qty: Number(i.qty),
-      price: Number(i.price),
-    })),
-    total: Number(o.total),
-    status: o.status as OrderStatus,
-    createdAt: o.createdAt,
-  }));
 }
 
 export async function setOrderStatus(id: string, status: OrderStatus): Promise<boolean> {
   try {
-    const headers = await getServerAuthHeaders();
-    await api(`/api/orders/${id}/status`, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify({ status }),
-    });
+    await pool.execute("UPDATE orders SET status = ? WHERE id = ?", [status, id]);
     return true;
   } catch {
-    return updateStoredOrderStatus(id, status);
+    return false;
   }
 }
 
 export async function getAdminStats() {
   try {
-    const headers = await getServerAuthHeaders();
-    return await api("/api/admin/stats", { headers });
+    return await fetchAdminStatsFromDb();
   } catch {
     return {
       totalOrders: 0,
       revenue: 0,
       productsCount: 0,
+      usersCount: 0,
+      users: 0,
+      guestOrdersCount: 0,
       orderCount: 0,
       pendingCount: 0,
       productCount: 0,
       lowStockCount: 0,
-      recentOrders: [],
     };
+  }
+}
+
+export async function getUsersAndCustomers(): Promise<AdminUserRecord[]> {
+  try {
+    // 1. Registered users from users table
+    const [userRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
+              COUNT(o.id) AS orders_count,
+              COALESCE(SUM(CASE WHEN o.status != 'cancelled' THEN o.total ELSE 0 END), 0) AS total_spent
+       FROM users u
+       LEFT JOIN orders o ON o.user_id = u.id
+       WHERE u.role = 'customer'
+       GROUP BY u.id, u.name, u.email, u.phone, u.role, u.created_at
+       ORDER BY u.created_at DESC`
+    );
+
+    const registered: AdminUserRecord[] = userRows.map((u) => ({
+      id: `user-${u.id}`,
+      name: String(u.name),
+      email: String(u.email),
+      phone: String(u.phone || ""),
+      role: "Registered",
+      isGuest: false,
+      orders: safeNumber(u.orders_count, 0),
+      spent: safeNumber(u.total_spent, 0),
+      createdAt: u.created_at ? new Date(u.created_at).toISOString() : new Date().toISOString(),
+    }));
+
+    // 2. Guest orders (where user_id IS NULL -> non-registered users)
+    const [guestRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT guest_name, guest_email, guest_phone,
+              COUNT(id) AS orders_count,
+              COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END), 0) AS total_spent,
+              MAX(created_at) AS last_order_at
+       FROM orders
+       WHERE user_id IS NULL
+       GROUP BY guest_name, guest_email, guest_phone
+       ORDER BY last_order_at DESC`
+    );
+
+    const registeredEmails = new Set(registered.map((r) => r.email.toLowerCase()));
+    const guests: AdminUserRecord[] = guestRows
+      .filter((g) => !registeredEmails.has(String(g.guest_email || "").toLowerCase()))
+      .map((g, idx) => ({
+        id: `guest-${idx}-${g.guest_email || "anon"}`,
+        name: `${g.guest_name || "Guest"} (Non-registered)`,
+        email: String(g.guest_email || ""),
+        phone: String(g.guest_phone || ""),
+        role: "Non-registered",
+        isGuest: true,
+        orders: safeNumber(g.orders_count, 0),
+        spent: safeNumber(g.total_spent, 0),
+        createdAt: g.last_order_at
+          ? new Date(g.last_order_at).toISOString()
+          : new Date().toISOString(),
+      }));
+
+    return [...registered, ...guests];
+  } catch (err) {
+    console.error("getUsersAndCustomers DB error:", err);
+    return [];
   }
 }

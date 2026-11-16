@@ -1,65 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findUserByEmail } from "@/lib/db";
+import type { RowDataPacket } from "mysql2";
+import pool from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 
-async function verifyJwt(token: string, secret: string): Promise<any | null> {
+export async function GET(req: NextRequest) {
   try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const [headerB64, payloadB64, signatureB64] = parts;
+    const authUser = await getAuthUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      "SELECT id, name, email, phone, role, created_at FROM users WHERE id = ? OR email = ? LIMIT 1",
+      [authUser.id, authUser.email]
     );
 
-    const b64 = signatureB64.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
-    const rawSig = Uint8Array.from(atob(b64 + pad), (c) => c.charCodeAt(0));
-    const data = enc.encode(`${headerB64}.${payloadB64}`);
-    const valid = await crypto.subtle.verify("HMAC", key, rawSig, data);
-    if (!valid) return null;
+    if (rows.length === 0) {
+      return NextResponse.json({
+        id: authUser.id,
+        name: authUser.name,
+        email: authUser.email,
+        phone: "",
+        role: authUser.role,
+        addresses: [],
+      });
+    }
 
-    const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(payloadJson);
-    if (payload.exp && Date.now() >= payload.exp * 1000) return null;
-    return payload;
-  } catch {
-    return null;
+    const u = rows[0];
+    return NextResponse.json({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone || "",
+      role: u.role,
+      created_at: u.created_at,
+      addresses: [],
+    });
+  } catch (error: any) {
+    console.error("Get current user error:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to fetch current user." },
+      { status: 500 }
+    );
   }
 }
 
-export async function GET(req: NextRequest) {
-  const token = req.cookies.get("token")?.value;
-  const secret = process.env.JWT_SECRET || "supersecretjwtkey_change_in_production_123456";
+export async function PUT(req: NextRequest) {
+  try {
+    const authUser = await getAuthUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const user = token ? await verifyJwt(token, secret) : null;
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const body = await req.json();
+    const name = String(body.name || "").trim();
+    const phone = body.phone ? String(body.phone).trim() : null;
 
-  if (user.role === "admin") {
+    if (name.length < 2) {
+      return NextResponse.json(
+        { error: "Please enter a valid name." },
+        { status: 400 }
+      );
+    }
+
+    await pool.execute(
+      "UPDATE users SET name = ?, phone = ? WHERE id = ?",
+      [name, phone, authUser.id]
+    );
+
     return NextResponse.json({
-      id: "admin-master",
-      name: "Administrator",
-      email: user.email || "admin@uppiliees.com",
-      role: "admin",
-      addresses: [],
+      success: true,
+      name,
+      phone: phone || "",
     });
+  } catch (error: any) {
+    console.error("Update profile error:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to update profile." },
+      { status: 500 }
+    );
   }
-
-  // Look up customer in local store to get up-to-date name/phone
-  const stored = findUserByEmail(user.email || "");
-
-  return NextResponse.json({
-    id: user.id || stored?.id,
-    name: stored?.name || user.name || "Customer",
-    email: user.email,
-    phone: stored?.phone || user.phone || "",
-    role: "customer",
-    addresses: [],
-  });
 }

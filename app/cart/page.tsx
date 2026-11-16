@@ -95,8 +95,11 @@ function writeCart(items: CartItem[]) {
   }
 }
 
-const formatPrice = (n: number) =>
-  `${PAGE_TEXT.currency}${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatPrice = (n: number | undefined | null) => {
+  const safe = Number(n ?? 0);
+  const valid = Number.isFinite(safe) ? safe : 0;
+  return `${PAGE_TEXT.currency}${valid.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+};
 
 /* ═══════════════════════════════════════════════════════════════
    3. ICONS
@@ -297,6 +300,21 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
     setLoaded(true);
+
+    // Sync from database cart if user is logged in
+    fetch("/api/cart", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
+          const local = readCart();
+          if (local.length === 0) {
+            setItems(data.items);
+            writeCart(data.items);
+          }
+        }
+      })
+      .catch(() => {});
+
     window.addEventListener(CART_EVENT, reload);
     window.addEventListener("storage", reload);
     return () => {
@@ -310,17 +328,26 @@ export default function CartPage() {
     const next = items.map((i: CartItem) => (i.id === id ? { ...i, qty: clamped } : i));
     setItems(next);
     writeCart(next);
+    fetch("/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: id, quantity: clamped, mode: "set" }),
+    }).catch(() => {});
   };
 
   const remove = (id: CartItem["id"]) => {
     const next = items.filter((i: CartItem) => i.id !== id);
     setItems(next);
     writeCart(next);
+    fetch(`/api/cart?productId=${encodeURIComponent(String(id))}`, {
+      method: "DELETE",
+    }).catch(() => {});
   };
 
   const clearAll = () => {
     setItems([]);
     writeCart([]);
+    fetch("/api/cart", { method: "DELETE" }).catch(() => {});
   };
 
   const count = items.reduce((n: number, i: CartItem) => n + i.qty, 0);

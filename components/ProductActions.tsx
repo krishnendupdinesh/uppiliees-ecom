@@ -319,29 +319,6 @@ export default function ProductActions({
           )}
         </div>
       </div>
-
-      {/* Sticky Mobile Bar for Mobile Viewports */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6EFE3] px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex sm:hidden items-center gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
-        {showBuyNow && (
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            disabled={isOutOfStock}
-            className="flex-1 inline-flex h-11 items-center justify-center rounded-md bg-[#07552F] px-2 text-xs font-bold text-white shadow-md active:bg-[#063D27] disabled:opacity-50 cursor-pointer"
-          >
-            {isOutOfStock ? "Out of Stock" : "Buy Now"}
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={isOutOfStock}
-          className="flex-1 inline-flex h-11 items-center justify-center rounded-md border-2 border-[#07552F] bg-white px-2 text-xs font-bold text-[#07552F] active:bg-[#F4F8F1] disabled:opacity-50 cursor-pointer"
-        >
-          {quantity > 0 ? `In Bag (${quantity}) +` : "Add to Cart"}
-        </button>
-      </div>
     </div>
   );
 }

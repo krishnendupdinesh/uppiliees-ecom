@@ -79,7 +79,7 @@ export default function ProductGallery({ product, discount = 0, wishlistHref }: 
       )}
 
       {/* Main Big Image Preview */}
-      <div className="relative flex-1 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 aspect-square flex items-center justify-center shadow-xs">
+      <div className="relative w-full sm:flex-1 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 aspect-square flex items-center justify-center shadow-xs">
         {isFailed ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">
             <span className="text-base font-semibold text-[#07552F]">{product.name}</span>

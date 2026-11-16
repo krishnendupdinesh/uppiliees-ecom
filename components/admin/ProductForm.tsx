@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { Product } from "@/lib/admin/types";
 import { api } from "@/lib/api";
+import ImageUpload from "@/components/ImageUpload";
 
 type Props = { product?: Product };
 
@@ -25,18 +26,24 @@ export default function ProductForm({ product }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
 
   const [form, setForm] = useState({
     name: product?.name ?? "",
-    category_id: 1,
+    category_id: product?.category_id ?? 1,
     category_name: product?.category ?? "",
+    subcategory: product?.subcategory ?? product?.category ?? "",
     price: product?.price ?? 0,
     mrp: product?.mrp ?? 0,
     stock: product?.stock ?? 25,
+    in_stock: product?.in_stock ?? (product ? product.stock > 0 : true),
     image: product?.image ?? "",
+    publicId: product?.publicId ?? "",
     images: (product?.images && product.images.length > 0 ? product.images : [product?.image ?? ""]).slice(0, 4),
+    imagePublicIds: (product?.imagePublicIds && product.imagePublicIds.length > 0
+      ? product.imagePublicIds
+      : [product?.publicId ?? ""]
+    ).slice(0, 4),
     description: product?.description ?? "",
     featured: product?.featured ?? false,
 
@@ -73,30 +80,42 @@ export default function ProductForm({ product }: Props) {
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Helper to handle image files from the system
-  const handleImageFileUpload = (idx: number) => {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+  // Handle Cloudinary image upload completion for a specific photo slot
+  const handleImageUploaded = (idx: number, url: string, publicId: string) => {
+    setForm((prev) => {
+      const updatedImages = [...(prev.images || [])];
+      const updatedPublicIds = [...(prev.imagePublicIds || [])];
+      updatedImages[idx] = url;
+      updatedPublicIds[idx] = publicId;
 
-      if (idx === 0) {
-        setImageFile(file);
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (typeof dataUrl === "string") {
-          const updated = [...(form.images || [])];
-          updated[idx] = dataUrl;
-          set("images", updated);
-          if (idx === 0) set("image", dataUrl);
-        }
+      return {
+        ...prev,
+        images: updatedImages,
+        imagePublicIds: updatedPublicIds,
+        ...(idx === 0 ? { image: url, publicId } : {}),
       };
-      reader.readAsDataURL(file);
-      e.target.value = "";
-    };
+    });
   };
+
+  // Handle clearing/removing a photo slot
+  const handleImageRemoved = (idx: number) => {
+    setForm((prev) => {
+      const updatedImages = [...(prev.images || [])];
+      const updatedPublicIds = [...(prev.imagePublicIds || [])];
+      updatedImages[idx] = "";
+      updatedPublicIds[idx] = "";
+
+      return {
+        ...prev,
+        images: updatedImages,
+        imagePublicIds: updatedPublicIds,
+        ...(idx === 0
+          ? { image: updatedImages[1] || "", publicId: updatedPublicIds[1] || "" }
+          : {}),
+      };
+    });
+  };
+
   const handleFileUpload = (field: "description" | "benefits" | "howToUse" | "ingredients" | "returnPolicy") => {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -124,7 +143,9 @@ export default function ProductForm({ product }: Props) {
     try {
       const selectedCat = categories.find((c) => c.id === Number(form.category_id));
       const imageList = (form.images || []).map((s) => s.trim()).filter(Boolean);
+      const publicIdList = (form.imagePublicIds || []).map((s) => (s || "").trim());
       const primaryImage = imageList[0] || form.image.trim() || undefined;
+      const primaryPublicId = publicIdList[0] || form.publicId.trim() || undefined;
 
       const validSizes = (form.sizes || [])
         .filter((s) => s.size.trim())
@@ -139,11 +160,17 @@ export default function ProductForm({ product }: Props) {
         name: form.name.trim(),
         category_id: Number(form.category_id),
         category_name: selectedCat?.name || form.category_name || "General",
-        price: validSizes.length > 0 ? validSizes[0].price : Number(form.price),
-        mrp: validSizes.length > 0 ? (validSizes[0].mrp || validSizes[0].price) : Number(form.mrp || form.price),
-        stock: Number(form.stock),
+        subcategory: (form.subcategory || selectedCat?.name || form.category_name || "General").trim(),
+        price: validSizes.length > 0 ? validSizes[0].price : Number(form.price || 0),
+        mrp: validSizes.length > 0 ? (validSizes[0].mrp || validSizes[0].price) : Number(form.mrp || form.price || 0),
+        stock: form.in_stock ? Number(form.stock ?? 0) : 0,
+        in_stock: Boolean(form.in_stock) && Number(form.stock ?? 0) > 0,
         image: primaryImage,
+        image_url: primaryImage,
+        publicId: primaryPublicId,
+        image_public_id: primaryPublicId,
         images: imageList.length > 0 ? imageList : primaryImage ? [primaryImage] : [],
+        imagePublicIds: publicIdList,
         description: form.description.trim() || undefined,
         featured: Boolean(form.featured),
 
@@ -154,30 +181,7 @@ export default function ProductForm({ product }: Props) {
         returnPolicy: form.returnPolicy.trim() || undefined,
       };
 
-      const useMultipart = Boolean(imageFile && process.env.NEXT_PUBLIC_API_URL);
-
-      let requestBody: BodyInit;
-      if (useMultipart && imageFile) {
-        const fd = new FormData();
-        fd.append("image", imageFile);
-        fd.append("name", payload.name);
-        fd.append("category_id", String(payload.category_id));
-        fd.append("category_name", payload.category_name);
-        fd.append("price", String(payload.price));
-        fd.append("mrp", String(payload.mrp));
-        fd.append("stock", String(payload.stock));
-        if (payload.description) fd.append("description", payload.description);
-        fd.append("featured", String(payload.featured));
-        fd.append("images", JSON.stringify(payload.images));
-        fd.append("sizes", JSON.stringify(payload.sizes));
-        if (payload.benefits) fd.append("benefits", payload.benefits);
-        if (payload.howToUse) fd.append("howToUse", payload.howToUse);
-        if (payload.ingredients) fd.append("ingredients", payload.ingredients);
-        if (payload.returnPolicy) fd.append("returnPolicy", payload.returnPolicy);
-        requestBody = fd;
-      } else {
-        requestBody = JSON.stringify(payload);
-      }
+      const requestBody = JSON.stringify(payload);
 
       if (product) {
         await api(`/api/products/${product.id}`, {
@@ -302,10 +306,53 @@ export default function ProductForm({ product }: Props) {
                   min="0"
                   required
                   value={form.stock}
-                  onChange={(e) => set("stock", Number(e.target.value))}
+                  onChange={(e) => {
+                    const nextStock = Number(e.target.value);
+                    setForm((f) => ({
+                      ...f,
+                      stock: nextStock,
+                      in_stock: nextStock > 0 ? f.in_stock : false,
+                    }));
+                  }}
                   className={inputClass}
                 />
               </div>
+            </div>
+
+            {/* In Stock / Out of Stock Toggle */}
+            <div className="flex items-center justify-between rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] px-4 py-3">
+              <div>
+                <span className="text-sm font-bold text-[#052E1D]">
+                  Stock Availability Status
+                </span>
+                <p className="text-xs text-[#5b6b60]">
+                  Mark this product as In Stock or Out of Stock on the store.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.in_stock && form.stock > 0)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm((f) => ({
+                      ...f,
+                      in_stock: checked,
+                      stock: checked && f.stock <= 0 ? 25 : f.stock,
+                    }));
+                  }}
+                  className="h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
+                />
+                <span
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    form.in_stock && form.stock > 0
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {form.in_stock && form.stock > 0 ? "In Stock" : "Out of Stock"}
+                </span>
+              </label>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -607,51 +654,23 @@ export default function ProductForm({ product }: Props) {
               )}
             </div>
 
-            {/* Inputs & Upload Buttons for 4 Photos */}
+            {/* Inputs & Cloudinary Upload Components for 4 Photos */}
             <div className="space-y-4">
               {[0, 1, 2, 3].map((idx) => (
-                <div key={idx} className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-3 space-y-2">
+                <div key={idx} className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-3 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-[#052E1D]">
                       Photo #{idx + 1} {idx === 0 && "(Cover / Main)"}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-1 rounded-md border border-[#cfdccf] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs transition">
-                        <Upload className="h-3 w-3" /> Choose Image
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageFileUpload(idx)}
-                          className="hidden"
-                        />
-                      </label>
-                      {form.images[idx] && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...form.images];
-                            updated[idx] = "";
-                            set("images", updated);
-                            if (idx === 0) set("image", updated[1] || "");
-                          }}
-                          className="text-[11px] text-red-500 hover:underline"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
                   </div>
 
-                  {/* Thumbnail snippet if set */}
-                  {form.images[idx] && (
-                    <div className="relative h-12 w-12 rounded-lg border border-[#cfdccf] overflow-hidden bg-white">
-                      <img
-                        src={form.images[idx]}
-                        alt={`Thumb ${idx + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
+                  {/* Reusable Cloudinary ImageUpload component */}
+                  <ImageUpload
+                    initialUrl={form.images[idx] || ""}
+                    initialPublicId={form.imagePublicIds?.[idx] || ""}
+                    onUploaded={(url, publicId) => handleImageUploaded(idx, url, publicId)}
+                    onRemoved={() => handleImageRemoved(idx)}
+                  />
 
                   <input
                     value={form.images[idx] || ""}
@@ -661,14 +680,14 @@ export default function ProductForm({ product }: Props) {
                       set("images", updated);
                       if (idx === 0) set("image", e.target.value);
                     }}
-                    placeholder={`Image URL or path (e.g. /products/...jpg)`}
+                    placeholder={`Or paste image URL (e.g. https://res.cloudinary.com/...)`}
                     className={inputClass}
                   />
                 </div>
               ))}
 
               <p className="pt-1 text-[11px] text-[#8BA894]">
-                You can either click <strong>&quot;Choose Image&quot;</strong> to select a photo from your computer, or paste a web URL/local path.
+                Click <strong>&quot;Upload Image&quot;</strong> to upload directly to Cloudinary (max 5 MB), or paste a URL/local path.
               </p>
             </div>
           </div>

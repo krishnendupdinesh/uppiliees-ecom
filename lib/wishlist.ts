@@ -51,15 +51,29 @@ export function isInWishlist(id: number | string): boolean {
 }
 
 export function toggleWishlistItem(item: WishlistItem): boolean {
+  const safePrice = Number.isFinite(Number(item.price)) ? Number(item.price) : 0;
+  const normalizedItem = { ...item, price: safePrice };
+
   const current = getWishlist();
-  const exists = current.some((i) => String(i.id) === String(item.id));
+  const exists = current.some((i) => String(i.id) === String(normalizedItem.id));
   let updated: WishlistItem[];
   if (exists) {
-    updated = current.filter((i) => String(i.id) !== String(item.id));
+    updated = current.filter((i) => String(i.id) !== String(normalizedItem.id));
+    if (typeof window !== "undefined") {
+      fetch(`/api/wishlist?productId=${encodeURIComponent(String(normalizedItem.id))}`, {
+        method: "DELETE",
+      }).catch(() => {});
+    }
   } else {
-    updated = [...current, item];
+    updated = [...current, normalizedItem];
+    if (typeof window !== "undefined") {
+      fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: normalizedItem.id }),
+      }).catch(() => {});
+    }
   }
   saveWishlist(updated);
   return !exists;
 }
-

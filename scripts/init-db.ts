@@ -1,0 +1,2 @@
+import "../db/init.ts";
+

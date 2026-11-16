@@ -90,7 +90,10 @@ export default function CheckoutPage() {
     setLoaded(true);
   }, []);
 
-  const subtotal = itemsToCheckout.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = itemsToCheckout.reduce(
+    (sum, item) => sum + (Number(item.price) || 0) * (Number(item.qty) || 1),
+    0
+  );
 
   const setField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -130,16 +133,23 @@ export default function CheckoutPage() {
     setServerError("");
 
     const itemsPayload = itemsToCheckout.map((item) => ({
+      id: item.id,
+      product_id: item.id,
       name: item.name,
-      qty: item.qty,
-      price: item.price,
+      qty: Number(item.qty) || 1,
+      quantity: Number(item.qty) || 1,
+      price: Number(item.price) || 0,
     }));
 
     const orderPayload = {
       name: form.name.trim(),
+      guest_name: form.name.trim(),
       email: form.email.trim(),
+      guest_email: form.email.trim(),
       phone: form.phone.trim(),
+      guest_phone: form.phone.trim(),
       address: form.address.trim(),
+      shipping_address: form.address.trim(),
       items: itemsPayload,
       total: subtotal,
       paymentMethod,
@@ -154,9 +164,7 @@ export default function CheckoutPage() {
         });
         await handleOrderSuccess(res.id);
       } catch (err: any) {
-        // Fallback simulated order if needed
-        const fallbackOrderId = "UPP-" + Date.now().toString().slice(-6);
-        await handleOrderSuccess(fallbackOrderId);
+        setServerError(err.message || "Failed to place order. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -165,16 +173,11 @@ export default function CheckoutPage() {
 
     // Razorpay Flow
     try {
-      let createdOrderId: string | number;
-      try {
-        const res = await api<{ id: number | string; total: number; message: string }>("/api/orders", {
-          method: "POST",
-          body: JSON.stringify(orderPayload),
-        });
-        createdOrderId = res.id;
-      } catch {
-        createdOrderId = "UPP-" + Date.now().toString().slice(-6);
-      }
+      const res = await api<{ id: number | string; total: number; message: string }>("/api/orders", {
+        method: "POST",
+        body: JSON.stringify(orderPayload),
+      });
+      const createdOrderId = res.id;
 
       // Check if Razorpay SDK loaded
       if (typeof window !== "undefined" && window.Razorpay) {

@@ -1,93 +1,196 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveStoredOrder, getStoredOrders } from "@/lib/db";
-
-async function verifyJwt(token: string, secret: string): Promise<any | null> {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const [headerB64, payloadB64, signatureB64] = parts;
-
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
-
-    const b64 = signatureB64.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
-    const rawSig = Uint8Array.from(atob(b64 + pad), (c) => c.charCodeAt(0));
-    const data = enc.encode(`${headerB64}.${payloadB64}`);
-    const valid = await crypto.subtle.verify("HMAC", key, rawSig, data);
-    if (!valid) return null;
-
-    const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(payloadJson);
-    if (payload.exp && Date.now() >= payload.exp * 1000) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-}
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import pool from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
+import { safeNumber } from "@/lib/products-db";
+import { fetchAllOrdersFromDb, fetchUserOrdersFromDb } from "@/lib/orders-db";
 
 export async function POST(req: NextRequest) {
+  const connection = await pool.getConnection();
   try {
+    const authUser = await getAuthUser(req);
     const body = await req.json();
-    const { name, email, phone, address, items, total, isGuest } = body;
 
-    if (!name || !email || !phone || !address) {
-      return NextResponse.json({ error: "Missing required contact or shipping details." }, { status: 400 });
+    const guestName = String(body.guest_name || body.name || authUser?.name || "").trim();
+    const guestEmail = String(body.guest_email || body.email || authUser?.email || "")
+      .trim()
+      .toLowerCase();
+    const guestPhone = String(body.guest_phone || body.phone || "").trim();
+    const shippingAddress = String(
+      body.shipping_address || body.address || ""
+    ).trim();
+    const items = Array.isArray(body.items) ? body.items : [];
+    const paymentMethod = String(body.paymentMethod || "cod").toLowerCase();
+    const paymentStatus =
+      body.payment_status || (paymentMethod === "razorpay" ? "paid" : "pending");
+
+    if (!guestName || !guestEmail || !guestPhone || !shippingAddress) {
+      return NextResponse.json(
+        { error: "Name, email, phone, and shipping address are required." },
+        { status: 400 }
+      );
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "Order must contain at least one item." }, { status: 400 });
+    if (items.length === 0) {
+      return NextResponse.json(
+        { error: "Order must contain at least one item." },
+        { status: 400 }
+      );
     }
 
-    // Save order in database
-    const savedOrder = saveStoredOrder({
-      customerName: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      address: address.trim(),
-      items: items.map((i: any) => ({
-        name: i.name,
-        qty: Number(i.qty) || 1,
-        price: Number(i.price) || 0,
-      })),
-      total: Number(total) || 0,
-      isGuest: Boolean(isGuest),
-    });
+    // Resolve user_id: NULL for guest orders (or if admin places a test guest order)
+    let userId: number | null = null;
+    if (authUser && authUser.role === "customer" && !body.isGuest) {
+      const parsedId = Number(authUser.id);
+      if (Number.isInteger(parsedId) && parsedId > 0) {
+        userId = parsedId;
+      }
+    }
 
-    return NextResponse.json({
-      success: true,
-      id: savedOrder.id,
-      total: savedOrder.total,
-      message: "Order placed successfully.",
-    });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Failed to create order" }, { status: 500 });
+    // Normalize items and calculate total safely
+    let calculatedTotal = 0;
+    const normalizedItems: {
+      productId: number | null;
+      name: string;
+      price: number;
+      quantity: number;
+    }[] = [];
+
+    for (const item of items) {
+      const itemName = String(item.name || "").trim();
+      const itemPrice = safeNumber(item.price, 0);
+      const itemQty = Math.max(1, Math.floor(safeNumber(item.quantity ?? item.qty, 1)));
+
+      if (!itemName) {
+        return NextResponse.json(
+          { error: "Each order item must have a valid name." },
+          { status: 400 }
+        );
+      }
+
+      // Resolve product_id in database if possible
+      let productId: number | null = null;
+      const rawPid = item.product_id ?? item.id;
+      if (rawPid !== undefined && rawPid !== null) {
+        const numericPid = Number(String(rawPid).split("-")[0]);
+        if (Number.isInteger(numericPid) && numericPid > 0) {
+          const [pRows] = await connection.execute<RowDataPacket[]>(
+            "SELECT id FROM products WHERE id = ? LIMIT 1",
+            [numericPid]
+          );
+          if (pRows[0]) productId = Number(pRows[0].id);
+        }
+      }
+      if (!productId) {
+        const cleanBaseName = itemName.replace(/\s*\([^)]*\)\s*$/, "").trim();
+        const [pRows] = await connection.execute<RowDataPacket[]>(
+          "SELECT id FROM products WHERE name = ? OR slug = ? LIMIT 1",
+          [cleanBaseName, item.slug || ""]
+        );
+        if (pRows[0]) productId = Number(pRows[0].id);
+      }
+
+      calculatedTotal += itemPrice * itemQty;
+      normalizedItems.push({
+        productId,
+        name: itemName,
+        price: itemPrice,
+        quantity: itemQty,
+      });
+    }
+
+    await connection.beginTransaction();
+
+    // Insert into orders table (user_id is NULL for guest orders)
+    const [orderRes] = await connection.execute<ResultSetHeader>(
+      `INSERT INTO orders (
+        user_id, guest_name, guest_email, guest_phone,
+        shipping_address, total, status, payment_status
+      ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [
+        userId,
+        guestName,
+        guestEmail,
+        guestPhone,
+        shippingAddress,
+        Number(calculatedTotal.toFixed(2)),
+        paymentStatus,
+      ]
+    );
+
+    const orderId = orderRes.insertId;
+
+    // Insert order items and decrement stock
+    for (const item of normalizedItems) {
+      await connection.execute(
+        `INSERT INTO order_items (order_id, product_id, name, price, quantity)
+         VALUES (?, ?, ?, ?, ?)`,
+        [orderId, item.productId, item.name, item.price, item.quantity]
+      );
+
+      if (item.productId) {
+        await connection.execute(
+          `UPDATE products
+           SET stock = GREATEST(0, stock - ?),
+               in_stock = CASE WHEN GREATEST(0, stock - ?) > 0 THEN TRUE ELSE FALSE END
+           WHERE id = ?`,
+          [item.quantity, item.quantity, item.productId]
+        );
+      }
+    }
+
+    // Clear database cart for logged-in customer
+    if (userId) {
+      await connection.execute("DELETE FROM cart_items WHERE user_id = ?", [userId]);
+    }
+
+    await connection.commit();
+
+    return NextResponse.json(
+      {
+        success: true,
+        id: orderId,
+        total: Number(calculatedTotal.toFixed(2)),
+        status: "pending",
+        payment_status: paymentStatus,
+        is_guest: userId === null,
+        message: "Order placed successfully.",
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    await connection.rollback();
+    console.error("POST /api/orders error:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to create order." },
+      { status: 500 }
+    );
+  } finally {
+    connection.release();
   }
 }
 
 export async function GET(req: NextRequest) {
-  // If user is authenticated customer, return their orders; if admin, return all
-  const token = req.cookies.get("token")?.value;
-  const secret = process.env.JWT_SECRET || "supersecretjwtkey_change_in_production_123456";
-  const user = token ? await verifyJwt(token, secret) : null;
+  try {
+    const authUser = await getAuthUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const allOrders = getStoredOrders();
+    // Admin sees all orders (including guest orders labeled as Non-registered)
+    if (authUser.role === "admin") {
+      const orders = await fetchAllOrdersFromDb();
+      return NextResponse.json(orders);
+    }
 
-  if (user?.role === "admin") {
-    return NextResponse.json(allOrders);
+    // Logged-in customer sees their own orders
+    const myOrders = await fetchUserOrdersFromDb(authUser.id, authUser.email);
+    return NextResponse.json(myOrders);
+  } catch (error: any) {
+    console.error("GET /api/orders error:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to fetch orders." },
+      { status: 500 }
+    );
   }
-
-  if (user?.email) {
-    const userOrders = allOrders.filter((o) => o.email.toLowerCase() === user.email.toLowerCase());
-    return NextResponse.json(userOrders);
-  }
-
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
-

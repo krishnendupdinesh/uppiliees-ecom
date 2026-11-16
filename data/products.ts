@@ -6,7 +6,7 @@
 /* ------------------------------------------------------------------ */
 
 export type Product = {
-  id: number;
+  id: number | string;
   name: string;
   slug: string; // image file name AND the last part of the product URL
   category: string; // sub-category shown on the card (e.g. "Hair Care")
@@ -14,6 +14,10 @@ export type Product = {
   mrp: number; // original price in INR (dummy)
   description?: string; // optional - shown on the product page when present
   collectionSlug?: string; // optional - overrides collection.slug when listed in allProducts
+  image?: string;
+  images?: string[];
+  stock?: number;
+  in_stock?: boolean;
 };
 
 export type PriceRange = {

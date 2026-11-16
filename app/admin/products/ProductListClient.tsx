@@ -112,10 +112,14 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                       <span className="text-base font-bold text-[#07552F]">{inr(p.price)}</span>
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          p.stock <= 5 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                          !p.in_stock || p.stock <= 0
+                            ? "bg-red-100 text-red-700"
+                            : p.stock <= 5
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
-                        {p.stock} in stock
+                        {!p.in_stock || p.stock <= 0 ? "Out of stock" : `${p.stock} in stock`}
                       </span>
                     </div>
                   </div>
@@ -192,10 +196,14 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                     <td className="px-5 py-3.5">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          p.stock <= 5 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                          !p.in_stock || p.stock <= 0
+                            ? "bg-red-100 text-red-700"
+                            : p.stock <= 5
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
-                        {p.stock} in stock
+                        {!p.in_stock || p.stock <= 0 ? "Out of stock" : `${p.stock} in stock`}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">

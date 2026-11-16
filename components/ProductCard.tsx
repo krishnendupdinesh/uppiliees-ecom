@@ -27,18 +27,23 @@ export default function ProductCard({
   const router = useRouter();
   const discount = getDiscount(product);
 
+  const safePrice = Number.isFinite(Number(product.price)) ? Number(product.price) : 0;
+  const safeMrp = Number.isFinite(Number(product.mrp)) ? Number(product.mrp) : safePrice;
+
   const wishlistItem = {
     id: product.id,
     name: product.name,
     description: product.description,
-    price: product.price,
-    originalPrice: product.mrp > product.price ? product.mrp : undefined,
+    price: safePrice,
+    originalPrice: safeMrp > safePrice ? safeMrp : undefined,
     image: (product as any).image || `/products/${product.slug}.jpg`,
     alt: product.name,
     href,
   };
 
-  const isOutOfStock = (product as any)?.stock === 0;
+  const isOutOfStock =
+    (product as any)?.in_stock === false ||
+    ((product as any)?.stock !== undefined && Number((product as any)?.stock) <= 0);
 
   // Handloom products require variant selection on product page
   const isHandloom =
