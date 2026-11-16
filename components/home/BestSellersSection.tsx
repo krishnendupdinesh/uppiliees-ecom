@@ -232,7 +232,7 @@ function ProductCard({
           {product.description}
         </p>
 
-        <div className="mt-2.5 sm:mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <div className="mt-auto pt-2.5 sm:pt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="text-lg sm:text-xl font-bold text-[#173D2A] md:text-[22px]">
             {formatPrice(product.price)}
           </span>
@@ -244,7 +244,7 @@ function ProductCard({
         </div>
 
         {/* Buttons: Add to Cart (outline) & Buy Now (solid) */}
-        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 md:mt-auto">
+        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2">
           <button
             type="button"
             onClick={() => {
@@ -269,7 +269,7 @@ function ProductCard({
                 );
               }
             }}
-            className="flex-1 inline-flex h-10 sm:h-11 items-center justify-center gap-1.5 rounded-md border-2 border-[#07552F] bg-white px-2.5 text-xs sm:text-sm font-semibold text-[#07552F] transition-colors duration-200 hover:bg-[#F4F8F1]"
+            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 md:h-11 items-center justify-center gap-1.5 rounded-md border-2 border-[#07552F] bg-white px-2.5 text-xs sm:text-sm font-semibold text-[#07552F] whitespace-nowrap transition-colors duration-200 hover:bg-[#F4F8F1] cursor-pointer"
           >
             Add to Cart
           </button>
@@ -277,7 +277,7 @@ function ProductCard({
           <button
             type="button"
             onClick={handleBuyNow}
-            className="flex-1 inline-flex h-10 sm:h-11 items-center justify-center rounded-md bg-[#07552F] px-2.5 text-xs sm:text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#063D27] shadow-sm"
+            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 md:h-11 items-center justify-center rounded-md bg-[#07552F] px-2.5 text-xs sm:text-sm font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:bg-[#063D27] shadow-sm cursor-pointer"
           >
             <span>Buy Now</span>
           </button>

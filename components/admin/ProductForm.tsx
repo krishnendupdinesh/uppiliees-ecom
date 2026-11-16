@@ -25,6 +25,7 @@ export default function ProductForm({ product }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
 
   const [form, setForm] = useState({
@@ -77,6 +78,10 @@ export default function ProductForm({ product }: Props) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+
+      if (idx === 0) {
+        setImageFile(file);
+      }
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -149,15 +154,40 @@ export default function ProductForm({ product }: Props) {
         returnPolicy: form.returnPolicy.trim() || undefined,
       };
 
+      const useMultipart = Boolean(imageFile && process.env.NEXT_PUBLIC_API_URL);
+
+      let requestBody: BodyInit;
+      if (useMultipart && imageFile) {
+        const fd = new FormData();
+        fd.append("image", imageFile);
+        fd.append("name", payload.name);
+        fd.append("category_id", String(payload.category_id));
+        fd.append("category_name", payload.category_name);
+        fd.append("price", String(payload.price));
+        fd.append("mrp", String(payload.mrp));
+        fd.append("stock", String(payload.stock));
+        if (payload.description) fd.append("description", payload.description);
+        fd.append("featured", String(payload.featured));
+        fd.append("images", JSON.stringify(payload.images));
+        fd.append("sizes", JSON.stringify(payload.sizes));
+        if (payload.benefits) fd.append("benefits", payload.benefits);
+        if (payload.howToUse) fd.append("howToUse", payload.howToUse);
+        if (payload.ingredients) fd.append("ingredients", payload.ingredients);
+        if (payload.returnPolicy) fd.append("returnPolicy", payload.returnPolicy);
+        requestBody = fd;
+      } else {
+        requestBody = JSON.stringify(payload);
+      }
+
       if (product) {
         await api(`/api/products/${product.id}`, {
           method: "PUT",
-          body: JSON.stringify(payload),
+          body: requestBody,
         });
       } else {
         await api("/api/products", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: requestBody,
         });
       }
 

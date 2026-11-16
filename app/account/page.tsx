@@ -50,9 +50,9 @@ const API = {
   register: "/api/auth/register",
   logout: "/api/auth/logout",
   updateProfile: "",
-  orders: "/api/orders/mine",
+  orders: "/api/orders/my",
   addAddress: "",
-  changePassword: "/auth/change-password",
+  changePassword: "/api/auth/change-password",
 };
 
 /**

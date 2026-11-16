@@ -1,12 +1,19 @@
 import Link from "next/link";
 import StatCard from "@/components/admin/StatCard";
-import { getOrders, getProducts } from "@/lib/admin/db";
+import { getAdminStats, getOrders, getProducts } from "@/lib/admin/db";
 
-const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const inr = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
 export default async function DashboardContent() {
-  const [products, orders] = await Promise.all([getProducts(), getOrders()]);
-  const revenue = orders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.total, 0);
+  const [products, orders, stats] = await Promise.all([
+    getProducts(),
+    getOrders(),
+    getAdminStats(),
+  ]);
+  const computedRevenue = orders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.total, 0);
+  const revenue = Number((stats as any)?.revenue || computedRevenue);
+  const totalOrdersCount = Number((stats as any)?.totalOrders || orders.length);
+  const totalProductsCount = Number((stats as any)?.productsCount || products.length);
   const pending = orders.filter((o) => o.status === "pending").length;
   const lowStock = products.filter((p) => p.stock <= 5);
   const recent = orders.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
@@ -17,8 +24,8 @@ export default async function DashboardContent() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Revenue" value={inr(revenue)} hint="Excludes cancelled orders" />
-        <StatCard label="Orders" value={orders.length} hint={`${pending} waiting to be packed`} />
-        <StatCard label="Products" value={products.length} />
+        <StatCard label="Orders" value={totalOrdersCount} hint={`${pending} waiting to be packed`} />
+        <StatCard label="Products" value={totalProductsCount} />
         <StatCard label="Low stock" value={lowStock.length} hint="5 units or fewer" />
       </div>
 

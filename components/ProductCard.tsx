@@ -137,13 +137,13 @@ export default function ProductCard({
       {footer ? (
         <div className="p-2 sm:p-3 pt-0">{footer}</div>
       ) : showBuyNow ? (
-        <div className="p-2 sm:p-3 pt-0 flex flex-col xs:flex-row gap-1.5 sm:gap-2">
+        <div className="p-2.5 sm:p-3.5 pt-0 flex flex-col sm:flex-row gap-2">
           {/* Add to Cart: Outline / Secondary */}
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={isOutOfStock}
-            className="flex-1 inline-flex items-center justify-center border border-[#07552F] text-[#07552F] hover:bg-[#F4F8F1] rounded py-1.5 px-2 text-[11px] sm:text-xs font-bold transition disabled:opacity-50"
+            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 items-center justify-center border-2 border-[#07552F] bg-white text-[#07552F] hover:bg-[#F4F8F1] rounded-md px-2 text-xs font-semibold whitespace-nowrap transition disabled:opacity-50 cursor-pointer"
           >
             Add to Cart
           </button>
@@ -153,7 +153,7 @@ export default function ProductCard({
             type="button"
             onClick={handleBuyNow}
             disabled={isOutOfStock}
-            className="flex-1 inline-flex items-center justify-center bg-[#07552F] hover:bg-[#063D27] text-white rounded py-1.5 px-2 text-[11px] sm:text-xs font-bold shadow-sm transition disabled:opacity-50"
+            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 items-center justify-center bg-[#07552F] hover:bg-[#063D27] text-white rounded-md px-2 text-xs font-semibold whitespace-nowrap shadow-sm transition disabled:opacity-50 cursor-pointer"
           >
             <span className="truncate">{isOutOfStock ? "Sold Out" : "Buy Now"}</span>
           </button>
