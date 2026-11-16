@@ -71,7 +71,7 @@ const SOCIAL_LINKS = {
  *   - endpoint "" + email   → opens the visitor's email app with the message filled in
  *   - both empty            → shows an honest "not connected yet" message
  */
-const CONTACT_ENDPOINT = "";
+const CONTACT_ENDPOINT = "/api/contact";
 
 const TOPICS = [
   "Product question",
@@ -129,6 +129,8 @@ async function submitContact(values: FormValues): Promise<SubmitResult> {
   const payload = {
     name: values.name.trim(),
     email: values.email.trim(),
+    phone: values.phone.trim() || null,
+    topic: values.topic || "Product question",
     message: values.message.trim(),
   };
 
