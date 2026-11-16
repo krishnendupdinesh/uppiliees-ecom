@@ -286,9 +286,21 @@ export default function ProductActions({
       </div>
 
       {/* Desktop / In-page Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-        {/* Add to Cart - Outline/Secondary */}
-        <div className="w-full sm:flex-1">
+      <div className="flex flex-row items-center gap-2.5 sm:gap-3 pt-2">
+        {/* Buy Now - Solid Primary (Left) */}
+        {showBuyNow && (
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={isOutOfStock}
+            className="flex-1 min-w-0 inline-flex h-11 sm:h-12 items-center justify-center rounded-md bg-[#07552F] px-3 sm:px-4 text-xs sm:text-sm font-bold text-white whitespace-nowrap shadow-md hover:bg-[#063D27] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {isOutOfStock ? "Out of Stock" : "Buy Now"}
+          </button>
+        )}
+
+        {/* Add to Cart - Outline/Secondary (Right) */}
+        <div className="flex-1 min-w-0">
           {quantity > 0 ? (
             <CartControl
               quantity={quantity}
@@ -300,37 +312,16 @@ export default function ProductActions({
               type="button"
               onClick={handleAdd}
               disabled={isOutOfStock}
-              className="w-full inline-flex h-12 items-center justify-center gap-2 rounded-md border-2 border-[#07552F] bg-white px-4 text-sm font-bold text-[#07552F] hover:bg-[#F4F8F1] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full inline-flex h-11 sm:h-12 items-center justify-center gap-2 rounded-md border-2 border-[#07552F] bg-white px-3 sm:px-4 text-xs sm:text-sm font-bold text-[#07552F] whitespace-nowrap hover:bg-[#F4F8F1] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Add to Cart
             </button>
           )}
         </div>
-
-        {/* Buy Now - Solid Primary */}
-        {showBuyNow && (
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            disabled={isOutOfStock}
-            className="w-full sm:flex-1 inline-flex h-12 items-center justify-center rounded-md bg-[#07552F] px-4 text-sm font-bold text-white shadow-md hover:bg-[#063D27] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {isOutOfStock ? "Out of Stock" : "Buy Now"}
-          </button>
-        )}
       </div>
 
       {/* Sticky Mobile Bar for Mobile Viewports */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6EFE3] px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex sm:hidden items-center gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={isOutOfStock}
-          className="flex-1 inline-flex h-11 items-center justify-center rounded-md border-2 border-[#07552F] bg-white px-2 text-xs font-bold text-[#07552F] active:bg-[#F4F8F1] disabled:opacity-50 cursor-pointer"
-        >
-          {quantity > 0 ? `In Bag (${quantity}) +` : "Add to Cart"}
-        </button>
-
         {showBuyNow && (
           <button
             type="button"
@@ -341,6 +332,15 @@ export default function ProductActions({
             {isOutOfStock ? "Out of Stock" : "Buy Now"}
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={isOutOfStock}
+          className="flex-1 inline-flex h-11 items-center justify-center rounded-md border-2 border-[#07552F] bg-white px-2 text-xs font-bold text-[#07552F] active:bg-[#F4F8F1] disabled:opacity-50 cursor-pointer"
+        >
+          {quantity > 0 ? `In Bag (${quantity}) +` : "Add to Cart"}
+        </button>
       </div>
     </div>
   );

@@ -23,12 +23,12 @@ export default function CartControl({ quantity, onAdd, onRemove }: Props) {
   }
 
   return (
-    <div className="flex items-center justify-between border border-[#07552F] rounded py-1 px-2">
-      <button onClick={onRemove} aria-label="Remove one" className="p-1 text-[#07552F]">
+    <div className="h-11 sm:h-12 flex items-center justify-between border-2 border-[#07552F] rounded-md px-2 sm:px-3 bg-white">
+      <button onClick={onRemove} aria-label="Remove one" className="p-1 text-[#07552F] cursor-pointer">
         <Minus size={16} />
       </button>
       <span className="text-sm font-semibold text-[#07552F]">{quantity}</span>
-      <button onClick={onAdd} aria-label="Add one more" className="p-1 text-[#07552F]">
+      <button onClick={onAdd} aria-label="Add one more" className="p-1 text-[#07552F] cursor-pointer">
         <Plus size={16} />
       </button>
     </div>

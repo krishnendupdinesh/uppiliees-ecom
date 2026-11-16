@@ -82,7 +82,7 @@ export default function Footer() {
                   Express Delivery
                 </h4>
                 <p className="text-xs sm:text-sm font-normal text-[#8BA894] mt-0.5 leading-snug">
-                  Fast all-India dispatch
+                  Fast all-India despatch
                 </p>
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function Footer() {
                     href="/track-order"
                     className="hover:text-[#C7E900] transition-colors no-underline block py-0.5 leading-snug"
                   >
-                    Track Dispatch
+                    Track Despatch
                   </Link>
                 </li>
                 <li>

@@ -22,7 +22,7 @@ export default function ProductCard({
   product,
   href,
   footer,
-  showBuyNow = false,
+  showBuyNow = true,
 }: Props) {
   const router = useRouter();
   const discount = getDiscount(product);
@@ -137,25 +137,25 @@ export default function ProductCard({
       {footer ? (
         <div className="p-2 sm:p-3 pt-0">{footer}</div>
       ) : showBuyNow ? (
-        <div className="p-2.5 sm:p-3.5 pt-0 flex flex-col sm:flex-row gap-2">
-          {/* Add to Cart: Outline / Secondary */}
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 items-center justify-center border-2 border-[#07552F] bg-white text-[#07552F] hover:bg-[#F4F8F1] rounded-md px-2 text-xs font-semibold whitespace-nowrap transition disabled:opacity-50 cursor-pointer"
-          >
-            Add to Cart
-          </button>
-
-          {/* Buy Now: Solid Primary */}
+        <div className="p-2.5 sm:p-3.5 pt-0 flex flex-row items-center gap-1.5 sm:gap-2">
+          {/* Buy Now: Solid Primary (Left) */}
           <button
             type="button"
             onClick={handleBuyNow}
             disabled={isOutOfStock}
-            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 items-center justify-center bg-[#07552F] hover:bg-[#063D27] text-white rounded-md px-2 text-xs font-semibold whitespace-nowrap shadow-sm transition disabled:opacity-50 cursor-pointer"
+            className="flex-1 min-w-0 inline-flex h-8 sm:h-9 md:h-10 items-center justify-center bg-[#07552F] hover:bg-[#063D27] text-white rounded-md px-1 sm:px-2 lg:px-1.5 xl:px-2 text-[10px] min-[400px]:text-[11px] sm:text-xs lg:text-[11px] xl:text-xs font-semibold whitespace-nowrap shadow-sm transition disabled:opacity-50 cursor-pointer"
           >
             <span className="truncate">{isOutOfStock ? "Sold Out" : "Buy Now"}</span>
+          </button>
+
+          {/* Add to Cart: Outline / Secondary (Right) */}
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className="flex-1 min-w-0 inline-flex h-8 sm:h-9 md:h-10 items-center justify-center border sm:border-2 border-[#07552F] bg-white text-[#07552F] hover:bg-[#F4F8F1] rounded-md px-1 sm:px-2 lg:px-1.5 xl:px-2 text-[10px] min-[400px]:text-[11px] sm:text-xs lg:text-[11px] xl:text-xs font-semibold whitespace-nowrap transition disabled:opacity-50 cursor-pointer"
+          >
+            Add to Cart
           </button>
         </div>
       ) : null}

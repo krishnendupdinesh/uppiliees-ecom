@@ -19,8 +19,8 @@ import Link from "next/link";
    ═══════════════════════════════════════════════════════════════ */
 
 const SECTION_TEXT = {
-  heading: "Explore Our Collections",
-  subheading: "Discover everyday essentials from our herbal, food and handloom collections.",
+  heading: "Explore Our Products",
+  subheading: "Discover everyday essentials from our herbal, food and handloom products.",
 };
 
 interface CategoryData {

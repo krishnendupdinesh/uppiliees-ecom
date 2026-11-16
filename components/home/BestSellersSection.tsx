@@ -29,7 +29,7 @@ import { api } from "@/lib/api";
 
 const SECTION_TEXT = {
   heading: "Our Best Sellers",
-  subheading: "Discover the favourites from our collections.",
+  subheading: "Discover the favourites from our products.",
   seeMoreText: "See More",
   seeMoreLink: "/shop", // ← Shop All page
   addToCartText: "Add to Cart",
@@ -218,8 +218,8 @@ function ProductCard({
       </Link>
 
       {/* Details */}
-      <div className="flex flex-1 flex-col p-3.5 sm:p-4 md:p-5">
-        <h3 className="text-[16px] sm:text-[17px] font-bold leading-snug text-[#07552F] md:text-[19px]">
+      <div className="flex flex-1 flex-col p-2.5 sm:p-4 md:p-5">
+        <h3 className="text-[15px] sm:text-[17px] font-bold leading-snug text-[#07552F] md:text-[19px]">
           <Link
             href={product.href}
             className="transition-colors duration-200 hover:text-[#4D9A18] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#07552F]"
@@ -243,8 +243,16 @@ function ProductCard({
           )}
         </div>
 
-        {/* Buttons: Add to Cart (outline) & Buy Now (solid) */}
-        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2">
+        {/* Buttons: Buy Now (left, solid) & Add to Cart (right, outline) side-by-side */}
+        <div className="mt-3 sm:mt-4 flex flex-row items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            className="flex-1 min-w-0 inline-flex h-8 sm:h-10 md:h-11 items-center justify-center rounded-md bg-[#07552F] px-1 sm:px-2.5 text-[10px] min-[400px]:text-[11px] sm:text-xs md:text-sm font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:bg-[#063D27] shadow-sm cursor-pointer"
+          >
+            <span>Buy Now</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -269,17 +277,9 @@ function ProductCard({
                 );
               }
             }}
-            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 md:h-11 items-center justify-center gap-1.5 rounded-md border-2 border-[#07552F] bg-white px-2.5 text-xs sm:text-sm font-semibold text-[#07552F] whitespace-nowrap transition-colors duration-200 hover:bg-[#F4F8F1] cursor-pointer"
+            className="flex-1 min-w-0 inline-flex h-8 sm:h-10 md:h-11 items-center justify-center rounded-md border sm:border-2 border-[#07552F] bg-white px-1 sm:px-2.5 text-[10px] min-[400px]:text-[11px] sm:text-xs md:text-sm font-semibold text-[#07552F] whitespace-nowrap transition-colors duration-200 hover:bg-[#F4F8F1] cursor-pointer"
           >
             Add to Cart
-          </button>
-
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            className="w-full sm:flex-1 inline-flex h-9 sm:h-10 md:h-11 items-center justify-center rounded-md bg-[#07552F] px-2.5 text-xs sm:text-sm font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:bg-[#063D27] shadow-sm cursor-pointer"
-          >
-            <span>Buy Now</span>
           </button>
         </div>
       </div>

@@ -724,6 +724,16 @@ export default async function ProductPage({ params }: { params: Params }) {
               Inclusive of applicable taxes
             </p>
 
+            {/* Actions */}
+            <div className="mt-6">
+              <ProductActions
+                product={product}
+                href={productHref(collection, product)}
+                showBuyNow={true}
+                customSizes={customSizes}
+              />
+            </div>
+
             {/* Key Benefits Bullet Section */}
             {benefitsList.length > 0 && (
               <div className="mt-6 p-4 rounded-xl bg-[#F4F8F1] border border-[#E6EFE3]">
@@ -750,16 +760,6 @@ export default async function ProductPage({ params }: { params: Params }) {
               </div>
             )}
 
-            {/* Actions */}
-            <div className="mt-8">
-              <ProductActions
-                product={product}
-                href={productHref(collection, product)}
-                showBuyNow={true}
-                customSizes={customSizes}
-              />
-            </div>
-
             {/* Tabs */}
             <ProductTabs tabs={tabs} />
           </div>
@@ -778,7 +778,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                   key={item.id}
                   product={item}
                   href={productHref(collection, item)}
-                  showBuyNow={false}
+                  showBuyNow={true}
                 />
               ))}
             </div>
