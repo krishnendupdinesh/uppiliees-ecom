@@ -4,6 +4,8 @@ import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { safeNumber } from "@/lib/products-db";
 
+export const dynamic = "force-dynamic";
+
 async function resolveProductId(productIdOrSlug: string): Promise<number | null> {
   const clean = String(productIdOrSlug || "").trim();
   if (!clean) return null;

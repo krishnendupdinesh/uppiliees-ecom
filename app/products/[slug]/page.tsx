@@ -25,7 +25,7 @@ import {
   safeNumber,
 } from "@/lib/products-db";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
 
@@ -451,14 +451,6 @@ const groupNames: Record<ProductGroup, string> = {
   food: "Traditional Kerala Food",
   handloom: "Traditional Handloom",
 };
-
-export function generateStaticParams() {
-  return collections.flatMap((collection) =>
-    collection.products.map((product) => ({
-      slug: product.slug,
-    }))
-  );
-}
 
 export async function generateMetadata({
   params,

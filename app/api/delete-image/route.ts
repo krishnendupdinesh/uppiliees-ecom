@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "@/lib/cloudinary";
 import { requireAdminUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 async function handleDeleteImage(req: NextRequest) {
   try {
     // 1. Protect admin route on the server

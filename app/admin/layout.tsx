@@ -1,6 +1,6 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Uppilies Admin" };
 
 export default function PanelLayout({ children }: { children: React.ReactNode }) {

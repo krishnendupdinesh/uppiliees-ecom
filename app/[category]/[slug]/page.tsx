@@ -1,7 +1,7 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { findProduct, findProductBySlug } from "@/data/products";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ category: string; slug: string }>;
 

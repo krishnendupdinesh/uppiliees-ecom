@@ -4,6 +4,8 @@ import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function PUT(req: NextRequest) {
   try {
     const authUser = await getAuthUser(req);

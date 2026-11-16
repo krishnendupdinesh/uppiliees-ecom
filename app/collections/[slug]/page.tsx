@@ -1,6 +1,6 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
 

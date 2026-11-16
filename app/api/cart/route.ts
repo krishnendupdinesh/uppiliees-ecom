@@ -4,6 +4,8 @@ import pool from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { safeNumber } from "@/lib/products-db";
 
+export const dynamic = "force-dynamic";
+
 // Helper to resolve numeric product ID from an id or slug
 async function resolveProductId(rawId: unknown): Promise<number | null> {
   if (rawId === undefined || rawId === null) return null;

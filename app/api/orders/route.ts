@@ -5,6 +5,8 @@ import { getAuthUser } from "@/lib/auth";
 import { safeNumber } from "@/lib/products-db";
 import { fetchAllOrdersFromDb, fetchUserOrdersFromDb } from "@/lib/orders-db";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const connection = await pool.getConnection();
   try {

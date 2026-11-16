@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminSettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

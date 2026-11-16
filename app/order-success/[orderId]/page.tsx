@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import OrderSuccessClient from "./OrderSuccessClient";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export default async function OrderSuccessPage({
   params,

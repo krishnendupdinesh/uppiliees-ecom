@@ -3,6 +3,8 @@ import type { ResultSetHeader } from "mysql2";
 import pool from "@/lib/db";
 import { requireAdminUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 const VALID_STATUSES = [
   "pending",
   "packed",

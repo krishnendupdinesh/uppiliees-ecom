@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import pool from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 const DEFAULT_CATEGORIES = [
   { id: 1, name: "Herbal & Beauty", slug: "herbal-beauty", subtitle: "Pure Nature. Pure Goodness." },
   { id: 2, name: "Traditional Food", slug: "traditional-foods", subtitle: "Homemade and traditional, straight from Kerala kitchens" },

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import ProductsContent from "./ProductsContent";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export default function ProductsPage() {
   return (

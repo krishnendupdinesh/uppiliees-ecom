@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "@/lib/cloudinary";
 import { requireAdminUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 // Maximum allowed file size: 5 MB in bytes
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 

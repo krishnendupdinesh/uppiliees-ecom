@@ -1,7 +1,7 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { OLD_PRODUCT_ID_TO_SLUG } from "@/lib/routes";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
 
