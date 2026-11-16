@@ -92,9 +92,17 @@ export default function AdminSidebar() {
         />
       )}
 
-      {/* ── SIDEBAR DRAWER (Mobile Slide-over & Desktop Sidebar) ─ */}
+      {/* ── SIDEBAR DRAWER (Mobile Slide-over & Desktop Fixed Sidebar) ─ */}
+      {/* Spacer div so main content does not slip underneath the fixed sidebar on desktop */}
+      <div
+        aria-hidden="true"
+        className={`hidden shrink-0 transition-all duration-300 md:block ${
+          collapsed ? "w-16" : "w-60"
+        }`}
+      />
+
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#052E1D] text-[#E6EFE3] shadow-2xl transition-all duration-300 ease-in-out md:static md:z-auto md:min-h-screen md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[#052E1D] text-[#E6EFE3] shadow-2xl transition-all duration-300 ease-in-out md:shadow-none ${
           /* Mobile open/close transition */
           mobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0"
         } ${
