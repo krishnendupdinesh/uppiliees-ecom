@@ -145,15 +145,15 @@ export default function ProductCard({
 
       {/* Footer / Buttons Area */}
       {footer ? (
-        <div className="p-2 sm:p-2.5 md:p-3 pt-0">{footer}</div>
+        <div className="px-2 sm:px-2.5 md:px-3 pb-2.5 sm:pb-3 pt-0">{footer}</div>
       ) : showBuyNow ? (
-        <div className="p-2 sm:p-2.5 md:p-3 pt-0 flex flex-row items-center gap-1.5 sm:gap-2">
+        <div className="px-2 sm:px-2.5 md:px-3 pb-2.5 sm:pb-3 pt-0 flex flex-row items-center gap-1.5 sm:gap-2">
           {/* Buy Now: Solid Primary (Left) */}
           <button
             type="button"
             onClick={handleBuyNow}
             disabled={isOutOfStock}
-            className="flex-1 min-w-0 inline-flex h-8 sm:h-9 items-center justify-center bg-[#07552F] hover:bg-[#063D27] text-white rounded-md px-2.5 sm:px-3 lg:px-3 xl:px-3.5 text-[11px] sm:text-xs font-semibold whitespace-nowrap shadow-sm transition disabled:opacity-50 cursor-pointer"
+            className="flex-1 min-w-0 inline-flex h-8 sm:h-9 items-center justify-center bg-[#07552F] hover:bg-[#063D27] text-white rounded-md px-2.5 sm:px-3 text-[10.5px] min-[380px]:text-[11px] sm:text-xs font-semibold whitespace-nowrap shadow-sm transition disabled:opacity-50 cursor-pointer"
           >
             <span>{isOutOfStock ? "Sold Out" : "Buy Now"}</span>
           </button>
@@ -163,9 +163,9 @@ export default function ProductCard({
             type="button"
             onClick={handleAddToCart}
             disabled={isOutOfStock}
-            className="flex-1 min-w-0 inline-flex h-8 sm:h-9 items-center justify-center border border-[#07552F] bg-white text-[#07552F] hover:bg-[#F4F8F1] rounded-md px-2.5 sm:px-3 lg:px-3 xl:px-3.5 text-[11px] sm:text-xs font-semibold whitespace-nowrap transition disabled:opacity-50 cursor-pointer"
+            className="flex-1 min-w-0 inline-flex h-8 sm:h-9 items-center justify-center border border-[#07552F] bg-white text-[#07552F] hover:bg-[#F4F8F1] rounded-md px-2 sm:px-3 text-[10px] min-[380px]:text-[10.5px] sm:text-xs font-semibold tracking-tight whitespace-nowrap transition disabled:opacity-50 cursor-pointer"
           >
-            Add to Cart
+            <span>Add to Cart</span>
           </button>
         </div>
       ) : null}

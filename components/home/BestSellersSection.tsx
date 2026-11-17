@@ -255,7 +255,7 @@ function ProductCard({
           <button
             type="button"
             onClick={handleBuyNow}
-            className="flex-1 min-w-0 inline-flex h-8 sm:h-10 md:h-11 items-center justify-center rounded-md bg-[#07552F] px-1 sm:px-2.5 text-[10px] min-[400px]:text-[11px] sm:text-xs md:text-sm font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:bg-[#063D27] shadow-sm cursor-pointer"
+            className="flex-1 min-w-0 inline-flex h-8.5 sm:h-10 md:h-11 items-center justify-center rounded-md bg-[#07552F] px-2.5 sm:px-3 text-[10.5px] min-[400px]:text-[11px] sm:text-xs md:text-sm font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:bg-[#063D27] shadow-sm cursor-pointer"
           >
             <span>Buy Now</span>
           </button>
@@ -284,9 +284,9 @@ function ProductCard({
                 );
               }
             }}
-            className="flex-1 min-w-0 inline-flex h-8 sm:h-10 md:h-11 items-center justify-center rounded-md border sm:border-2 border-[#07552F] bg-white px-1 sm:px-2.5 text-[10px] min-[400px]:text-[11px] sm:text-xs md:text-sm font-semibold text-[#07552F] whitespace-nowrap transition-colors duration-200 hover:bg-[#F4F8F1] cursor-pointer"
+            className="flex-1 min-w-0 inline-flex h-8.5 sm:h-10 md:h-11 items-center justify-center rounded-md border sm:border-2 border-[#07552F] bg-white px-2 sm:px-3 text-[10px] min-[400px]:text-[10.5px] sm:text-xs md:text-sm font-semibold tracking-tight text-[#07552F] whitespace-nowrap transition-colors duration-200 hover:bg-[#F4F8F1] cursor-pointer"
           >
-            Add to Cart
+            <span>Add to Cart</span>
           </button>
         </div>
       </div>
