@@ -512,8 +512,8 @@ export default function ProductForm({ product }: Props) {
               </FormField>
             </div>
 
-            {/* Category / Subcategory / Display Order Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+            {/* Category & Display Order Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
               <FormField label="Category" required>
                 <div className="relative w-full">
                   <select
@@ -525,6 +525,7 @@ export default function ProductForm({ product }: Props) {
                         ...f,
                         category_id: id,
                         category_name: found?.name || "",
+                        subcategory: found?.name || "",
                       }));
                     }}
                     className={`${inputClass} appearance-none pr-9 cursor-pointer`}
@@ -548,15 +549,6 @@ export default function ProductForm({ product }: Props) {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 </div>
-              </FormField>
-
-              <FormField label="Subcategory">
-                <input
-                  value={form.subcategory}
-                  onChange={(e) => set("subcategory", e.target.value)}
-                  placeholder="e.g. Skin Care, Powders"
-                  className={inputClass}
-                />
               </FormField>
 
               <FormField label="Display order">

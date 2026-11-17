@@ -246,8 +246,8 @@ export async function getAdminCategories(): Promise<Category[]> {
         COUNT(p.id) AS product_count
       FROM categories c
       LEFT JOIN sections s ON s.id = c.section_id
-      LEFT JOIN products p ON c.id = p.category_id
-      GROUP BY c.id, c.name, c.slug, c.section_id, s.name, s.slug, c.is_active, c.image, c.subtitle, c.created_at
+      LEFT JOIN products p ON c.id = p.category_id AND (p.is_active = TRUE OR p.is_active IS NULL)
+      GROUP BY c.id, c.name, c.slug, c.section_id, s.name, s.slug, c.is_active, c.image, c.subtitle, c.created_at, s.sort_order
       ORDER BY COALESCE(s.sort_order, 1) ASC, c.name ASC
     `);
     return rows.map((r) => ({
