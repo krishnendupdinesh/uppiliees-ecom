@@ -41,18 +41,18 @@ interface CategoryData {
 const CATEGORIES: CategoryData[] = [
   {
     id: 1,
-    title: "Herbal, Beauty & Wellness Products",
+    title: "Herbal & Wellness",
     shortTitle: "Herbal & Wellness",
     description: "Nature-inspired essentials for your everyday self-care.",
     image: "/images/category-herbal.jpg", // ← change image URL here
-    alt: "Herbal, beauty and wellness products",
+    alt: "Herbal & Wellness products",
     href: "/herbal-beauty",
     linkText: "Shop Now",
     position: "center",
   },
   {
     id: 2,
-    title: "Traditional Kerala Food Products",
+    title: "Kerala Food Products",
     shortTitle: "Kerala Food",
     description: "Authentic flavours made the traditional Kerala way.",
     image: "/images/category-food.jpg", // ← change image URL here
@@ -63,7 +63,7 @@ const CATEGORIES: CategoryData[] = [
   },
   {
     id: 3,
-    title: "Traditional Handloom Products",
+    title: "Handlooms",
     shortTitle: "Handlooms",
     description: "Handwoven pieces that celebrate Kerala craftsmanship.",
     image: "/images/category-handlooms.jpg", // ← change image URL here
@@ -184,32 +184,21 @@ export default function CategorySection() {
   const [categories, setCategories] = useState<CategoryData[]>(CATEGORIES);
 
   useEffect(() => {
-    fetch("/api/categories")
+    // Sync section titles with backend sections if available, strictly keeping the 3 main sections
+    fetch("/api/menu")
       .then((res) => (res.ok ? res.json() : []))
-      .then((data: any[]) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const fallbackImages = [
-            "/images/category-herbal.jpg",
-            "/images/category-food.jpg",
-            "/images/category-handlooms.jpg",
-          ];
-          const mapped: CategoryData[] = data.map((cat, idx) => {
-            const staticMatch = CATEGORIES.find(
-              (c) => c.href.replace("/", "") === cat.slug || c.title.toLowerCase().includes(cat.name.toLowerCase())
-            );
+      .then((sections: any[]) => {
+        if (Array.isArray(sections) && sections.length > 0) {
+          const updated = CATEGORIES.map((cat, idx) => {
+            const sec = sections[idx];
+            if (!sec) return cat;
             return {
-              id: Number(cat.id),
-              title: cat.name,
-              shortTitle: cat.name,
-              description: cat.subtitle || staticMatch?.description || "Authentic handcrafted Kerala products.",
-              image: cat.image || staticMatch?.image || fallbackImages[idx % fallbackImages.length],
-              alt: cat.name,
-              href: `/${cat.slug}`,
-              linkText: "Shop Now",
-              position: "center",
+              ...cat,
+              title: sec.name || cat.title,
+              shortTitle: sec.name || cat.shortTitle,
             };
           });
-          setCategories(mapped);
+          setCategories(updated);
         }
       })
       .catch(() => {
@@ -235,11 +224,9 @@ export default function CategorySection() {
           </p>
         </div>
 
-        {/* Categories grid */}
-        <div className={`mt-6 grid gap-2 sm:mt-8 sm:gap-4 md:mt-12 md:gap-6 lg:gap-8 ${
-          categories.length <= 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-        }`}>
-          {categories.map((item, i) => (
+        {/* Categories grid: strictly 3 columns on all screen sizes */}
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4 md:mt-12 md:gap-6 lg:gap-8">
+          {categories.slice(0, 3).map((item, i) => (
             <CategoryCard key={item.id} item={item} delay={i * 100} />
           ))}
         </div>
