@@ -33,6 +33,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { formatOrderStatus, getOrderStatusBadgeColor } from "@/lib/order-status";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -750,8 +751,8 @@ function OrdersTab({ preview }: { preview: boolean }) {
             <li key={o.id} className="rounded-lg border border-[#E2EBDD] bg-[#FAFBF6] p-4 md:p-5">
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                 <p className="text-[15px] font-bold text-[#07552F]">Order #{o.id}</p>
-                <span className="rounded-full bg-[#EDF3E9] px-3 py-1 text-[13px] font-semibold text-[#063D27]">
-                  {o.status}
+                <span className={`rounded-full border px-3 py-0.5 text-xs font-semibold ${getOrderStatusBadgeColor(o.status)}`}>
+                  {formatOrderStatus(o.status)}
                 </span>
               </div>
               <p className="mt-1 text-sm text-[#68786B]">{formatDate(o.created_at || o.date || "")}</p>

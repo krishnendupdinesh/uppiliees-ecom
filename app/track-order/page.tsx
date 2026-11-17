@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Package, Truck, CheckCircle2 } from "lucide-react";
+import { Search, Package, Truck, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import {
+  ORDER_STATUSES,
+  ORDER_STATUS_LABELS,
+  getOrderStatusBadgeColor,
+  type OrderStatus,
+} from "@/lib/order-status";
 
 export default function TrackOrderPage() {
   const [orderNumber, setOrderNumber] = useState("");
@@ -65,8 +71,8 @@ export default function TrackOrderPage() {
                 <span className="text-xs text-gray-500 uppercase tracking-wider block">Order Reference</span>
                 <span className="text-lg font-bold text-[#063D27]">#{orderNumber.trim()}</span>
               </div>
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-[#07552F]">
-                In Transit
+              <span className={`text-xs font-bold px-3 py-1 rounded-full border ${getOrderStatusBadgeColor("shipped")}`}>
+                In Transit ({ORDER_STATUS_LABELS.shipped})
               </span>
             </div>
 

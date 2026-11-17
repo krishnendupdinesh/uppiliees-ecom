@@ -68,22 +68,27 @@ export type Product = {
   returnPolicy?: string;
 };
 
-export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "packed"
-  | "processing"
-  | "shipped"
-  | "delivered"
-  | "cancelled";
+import {
+  ORDER_STATUSES,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+  formatOrderStatus,
+  isValidOrderStatus,
+  getOrderStatusColor,
+  getOrderStatusBadgeColor,
+  type OrderStatus,
+} from "@/lib/order-status";
 
-export const ORDER_STATUSES: OrderStatus[] = [
-  "pending",
-  "confirmed",
-  "shipped",
-  "delivered",
-  "cancelled",
-];
+export {
+  ORDER_STATUSES,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+  formatOrderStatus,
+  isValidOrderStatus,
+  getOrderStatusColor,
+  getOrderStatusBadgeColor,
+  type OrderStatus,
+};
 
 export type Order = {
   id: string;

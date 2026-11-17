@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import Modal from "@/components/admin/Modal";
-import type { Order, OrderStatus } from "@/lib/admin/types";
+import type { Order } from "@/lib/admin/types";
+import {
+  ORDER_STATUSES,
+  ORDER_STATUS_LABELS,
+  formatOrderStatus,
+  type OrderStatus,
+} from "@/lib/order-status";
 
 const inr = (n: unknown) => {
   if (n === undefined || n === null) return "₹0";
@@ -180,7 +186,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
             </button>
           </div>
 
-          {/* Status Filter (Requirement 7) */}
+          {/* Status Filter */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-[#052E1D]">Status:</span>
             <select
@@ -189,11 +195,11 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
               className="rounded-lg border border-[#cfdccf] bg-white px-3 py-1.5 text-xs font-semibold text-[#052E1D] outline-none transition focus:border-[#07552F] cursor-pointer"
             >
               <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="shipped">Shipped</option>
-              <option value="delivered">Delivered</option>
-              <option value="cancelled">Cancelled</option>
+              {ORDER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {ORDER_STATUS_LABELS[s]}
+                </option>
+              ))}
             </select>
           </div>
         </div>
