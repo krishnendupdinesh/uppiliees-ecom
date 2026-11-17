@@ -17,6 +17,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  ChevronDown,
 } from "lucide-react";
 import type { Product } from "@/lib/admin/types";
 import { api } from "@/lib/api";
@@ -30,6 +31,62 @@ type UploadedImageItem = {
 };
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+// Reusable FormField wrapper (sentence case, 13px 500 slate-700, whitespace-nowrap label, optional hint)
+function FormField({
+  label,
+  hint,
+  required,
+  children,
+  className = "",
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col min-w-0 ${className}`}>
+      <label className="text-[13px] font-medium text-slate-700 mb-1.5 flex items-center gap-1 whitespace-nowrap truncate">
+        <span className="truncate">{label}</span>
+        {required && <span className="text-red-500 font-semibold">*</span>}
+      </label>
+      <div className="relative w-full">{children}</div>
+      {hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
+// Simple toggle switch component replacing plain checkboxes
+function ToggleSwitch({
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#07552F]/20 disabled:cursor-not-allowed disabled:opacity-50 ${
+        checked ? "bg-[#07552F]" : "bg-slate-300"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
 
 export default function ProductForm({ product }: Props) {
   const router = useRouter();
@@ -354,8 +411,7 @@ export default function ProductForm({ product }: Props) {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-[#cfdccf]/80 bg-white px-4 py-2.5 text-sm text-[#052E1D] outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/20";
-  const labelClass = "block text-xs font-semibold uppercase tracking-wider text-[#052E1D] mb-1";
+    "w-full h-[44px] px-3.5 bg-white border border-slate-200 rounded-[10px] text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/15 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
     <form onSubmit={submit} className="space-y-6">
@@ -364,17 +420,17 @@ export default function ProductForm({ product }: Props) {
         <button
           type="button"
           onClick={() => router.push("/admin/products")}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5b6b60] hover:text-[#07552F] mb-3 transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-[#07552F] mb-3 transition cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to products
         </button>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#052E1D]">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               {product ? "Edit product" : "New product"}
             </h1>
-            <p className="text-xs text-[#5b6b60] mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               {product
                 ? "Update product details, pricing, stock, and media."
                 : "Create and publish a new handcrafted Kerala product."}
@@ -385,14 +441,14 @@ export default function ProductForm({ product }: Props) {
             <button
               type="button"
               onClick={() => router.push("/admin/products")}
-              className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#052E1D] transition hover:bg-[#F5F8F4] cursor-pointer"
+              className="h-[42px] rounded-[10px] border border-slate-200 bg-white px-4 text-xs sm:text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               disabled={saving || success || uploadingImages}
               type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07552F] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
+              className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[10px] bg-[#07552F] px-5 sm:px-6 text-xs sm:text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
             >
               {saving ? (
                 "Saving..."
@@ -429,14 +485,14 @@ export default function ProductForm({ product }: Props) {
         {/* Left Column: Essential & Detailed Specifications */}
         <div className="space-y-6">
           {/* General Information Card */}
-          <div className="space-y-5 rounded-2xl border border-[#E6EFE3] bg-white p-5 sm:p-7 shadow-xs">
-            <h2 className="text-base font-bold text-[#052E1D] border-b border-[#F0F5EE] pb-3">
+          <div className="space-y-5 rounded-[16px] border border-slate-200 bg-white p-6 shadow-xs">
+            <h2 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3">
               Basic Product Details
             </h2>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Product Title *</label>
+            {/* Product title & Slug Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <FormField label="Product title" required>
                 <input
                   required
                   value={form.name}
@@ -444,66 +500,66 @@ export default function ProductForm({ product }: Props) {
                   placeholder="e.g. Traditional Kerala Handloom Saree"
                   className={inputClass}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={labelClass}>URL Slug (Auto-generated if empty)</label>
+              <FormField label="URL slug (optional)">
                 <input
                   value={form.slug}
                   onChange={(e) => set("slug", e.target.value)}
                   placeholder="e.g. kerala-handloom-sarees"
                   className={inputClass}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className={labelClass}>Category *</label>
-                <select
-                  value={form.category_id}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
-                    const found = categories.find((c) => c.id === id);
-                    setForm((f) => ({
-                      ...f,
-                      category_id: id,
-                      category_name: found?.name || "",
-                    }));
-                  }}
-                  className={inputClass}
-                >
-                  {Object.entries(
-                    categories.reduce((acc, cat) => {
-                      const sec = cat.section_name || "Categories";
-                      if (!acc[sec]) acc[sec] = [];
-                      acc[sec].push(cat);
-                      return acc;
-                    }, {} as Record<string, typeof categories>)
-                  ).map(([sectionName, cats]) => (
-                    <optgroup key={sectionName} label={sectionName}>
-                      {cats.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
+            {/* Category / Subcategory / Display Order Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+              <FormField label="Category" required>
+                <div className="relative w-full">
+                  <select
+                    value={form.category_id}
+                    onChange={(e) => {
+                      const id = Number(e.target.value);
+                      const found = categories.find((c) => c.id === id);
+                      setForm((f) => ({
+                        ...f,
+                        category_id: id,
+                        category_name: found?.name || "",
+                      }));
+                    }}
+                    className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+                  >
+                    {Object.entries(
+                      categories.reduce((acc, cat) => {
+                        const sec = cat.section_name || "Categories";
+                        if (!acc[sec]) acc[sec] = [];
+                        acc[sec].push(cat);
+                        return acc;
+                      }, {} as Record<string, typeof categories>)
+                    ).map(([sectionName, cats]) => (
+                      <optgroup key={sectionName} label={sectionName}>
+                        {cats.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
+              </FormField>
 
-              <div>
-                <label className={labelClass}>Subcategory / Group</label>
+              <FormField label="Subcategory">
                 <input
                   value={form.subcategory}
                   onChange={(e) => set("subcategory", e.target.value)}
-                  placeholder="e.g. Skin Care, Powders, Dried Foods"
+                  placeholder="e.g. Skin Care, Powders"
                   className={inputClass}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={labelClass}>Display Order</label>
+              <FormField label="Display order">
                 <input
                   type="number"
                   min="0"
@@ -511,100 +567,88 @@ export default function ProductForm({ product }: Props) {
                   onChange={(e) => set("display_order", Number(e.target.value))}
                   className={inputClass}
                 />
-              </div>
+              </FormField>
             </div>
 
-            {/* Pricing Section: MRP + Discount % = Selling Price (Read Only), plus Stock */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className={labelClass}>MRP / Original Price (₹) *</label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 1000"
-                  value={form.mrp === 0 && !product ? "" : form.mrp}
-                  onChange={(e) => set("mrp", e.target.value === "" ? "" : Number(e.target.value))}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Discount % (0 to 100)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  placeholder="e.g. 20"
-                  value={form.discount_percent === 0 ? "0" : form.discount_percent || ""}
-                  onChange={(e) => set("discount_percent", e.target.value === "" ? "" : Number(e.target.value))}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Selling Price (₹) [Read Only]</label>
-                <input
-                  type="number"
-                  readOnly
-                  disabled
-                  value={liveSellingPrice}
-                  className={`${inputClass} bg-[#F4F8F1] cursor-not-allowed font-bold text-[#07552F]`}
-                />
-                <p className="mt-1 text-[11px] text-[#5b6b60]">
-                  MRP - discount % = selling price
-                </p>
-              </div>
-
-              <div>
-                <label className={labelClass}>Available Stock Units *</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={form.stock}
-                  onChange={(e) => {
-                    const nextStock = Number(e.target.value);
-                    setForm((f) => ({
-                      ...f,
-                      stock: nextStock,
-                      in_stock: nextStock > 0 ? f.in_stock : false,
-                    }));
-                  }}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            {/* Status Toggles: In/Out of Stock & Show/Hide on Website */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] px-4 py-3">
-                <div>
-                  <span className="text-sm font-bold text-[#052E1D] block">
-                    Stock Availability
-                  </span>
-                  <span className="text-xs text-[#5b6b60]">
-                    In Stock or Out of Stock
-                  </span>
-                </div>
-                <label className="inline-flex items-center gap-2 cursor-pointer">
+            {/* Pricing Section: 4 equal columns on desktop, horizontal baseline, single hint line */}
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                <FormField label="MRP (₹)" required>
                   <input
-                    type="checkbox"
-                    checked={Boolean(form.in_stock && form.stock > 0)}
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    placeholder="e.g. 1000"
+                    value={form.mrp === 0 && !product ? "" : form.mrp}
+                    onChange={(e) => set("mrp", e.target.value === "" ? "" : Number(e.target.value))}
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Discount (%)">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="e.g. 20"
+                    value={form.discount_percent === 0 ? "0" : form.discount_percent || ""}
+                    onChange={(e) => set("discount_percent", e.target.value === "" ? "" : Number(e.target.value))}
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Selling price (₹)">
+                  <div className="flex items-center h-[44px] px-3.5 bg-[#F4F8F1] border border-slate-200 rounded-[10px] text-sm font-semibold text-[#07552F] select-none cursor-default">
+                    <span className="text-slate-500 font-normal mr-1">₹</span>
+                    <span>
+                      {Number(liveSellingPrice || 0).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </FormField>
+
+                <FormField label="Stock units" required>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={form.stock}
                     onChange={(e) => {
-                      const checked = e.target.checked;
+                      const nextStock = Number(e.target.value);
                       setForm((f) => ({
                         ...f,
-                        in_stock: checked,
-                        stock: checked && f.stock <= 0 ? 25 : f.stock,
+                        stock: nextStock,
+                        in_stock: nextStock > 0 ? f.in_stock : false,
                       }));
                     }}
-                    className="h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
+                    className={inputClass}
                   />
+                </FormField>
+              </div>
+              <p className="text-[12px] text-slate-500 flex items-center gap-1.5 pt-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#07552F]" />
+                MRP - discount % = selling price
+              </p>
+            </div>
+
+            {/* Status Toggles: In/Out of Stock & Show/Hide on Website with ToggleSwitch */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between min-h-[72px] p-4 rounded-xl border border-slate-200 bg-slate-50/60">
+                <div className="min-w-0 pr-3">
+                  <span className="text-sm font-semibold text-slate-900 block truncate">
+                    Stock availability
+                  </span>
+                  <span className="text-xs text-slate-500 block truncate">
+                    In stock or out of stock
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5 shrink-0">
                   <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                       form.in_stock && form.stock > 0
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-red-100 text-red-700"
@@ -612,30 +656,34 @@ export default function ProductForm({ product }: Props) {
                   >
                     {form.in_stock && form.stock > 0 ? "In Stock" : "Out of Stock"}
                   </span>
-                </label>
+                  <ToggleSwitch
+                    checked={Boolean(form.in_stock && form.stock > 0)}
+                    onChange={(checked) => {
+                      setForm((f) => ({
+                        ...f,
+                        in_stock: checked,
+                        stock: checked && f.stock <= 0 ? 25 : f.stock,
+                      }));
+                    }}
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] px-4 py-3">
-                <div>
-                  <span className="text-sm font-bold text-[#052E1D] block">
-                    Website Visibility
+              <div className="flex items-center justify-between min-h-[72px] p-4 rounded-xl border border-slate-200 bg-slate-50/60">
+                <div className="min-w-0 pr-3">
+                  <span className="text-sm font-semibold text-slate-900 block truncate">
+                    Website visibility
                   </span>
-                  <span className="text-xs text-[#5b6b60]">
+                  <span className="text-xs text-slate-500 block truncate">
                     Show or hide on store
                   </span>
                 </div>
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(form.is_active)}
-                    onChange={(e) => set("is_active", e.target.checked)}
-                    className="h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
-                  />
+                <div className="flex items-center gap-2.5 shrink-0">
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                       form.is_active
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-200 text-gray-700"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-slate-200 text-slate-700"
                     }`}
                   >
                     {form.is_active ? (
@@ -648,28 +696,32 @@ export default function ProductForm({ product }: Props) {
                       </>
                     )}
                   </span>
-                </label>
+                  <ToggleSwitch
+                    checked={Boolean(form.is_active)}
+                    onChange={(checked) => set("is_active", checked)}
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className={labelClass}>Tags / Highlights (comma-separated)</label>
+            {/* Tags Input (full width) */}
+            <FormField label="Tags (comma separated)">
               <input
                 value={form.tags}
                 onChange={(e) => set("tags", e.target.value)}
                 placeholder="e.g. 100% Herbal & Ayurvedic, Fast-acting relief, Zero preservatives"
                 className={inputClass}
               />
-            </div>
+            </FormField>
 
             {/* Sizes & Separate Prices Section */}
-            <div className="rounded-xl border border-[#E6EFE3] bg-[#F9FCF8] p-4 space-y-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-[#052E1D]">
+                  <h3 className="text-sm font-semibold text-slate-900">
                     Product Sizes & Separate Prices
                   </h3>
-                  <p className="text-xs text-[#5b6b60]">
+                  <p className="text-xs text-slate-500">
                     Add specific sizes/weights (e.g. 100ml, 250ml, 500g, Standard) with their own prices.
                   </p>
                 </div>
@@ -698,10 +750,10 @@ export default function ProductForm({ product }: Props) {
                   {form.sizes.map((s, idx) => (
                     <div
                       key={idx}
-                      className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2 rounded-lg border border-[#cfdccf]/70 bg-white p-2.5 shadow-2xs"
+                      className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-2xs"
                     >
                       <div>
-                        <label className="text-[10px] font-bold uppercase text-[#5b6b60] block mb-1">
+                        <label className="text-[11px] font-medium text-slate-600 block mb-1">
                           Size / Variant
                         </label>
                         <input
@@ -712,12 +764,12 @@ export default function ProductForm({ product }: Props) {
                             updated[idx].size = e.target.value;
                             set("sizes", updated);
                           }}
-                          className="w-full rounded-md border border-[#cfdccf] px-2.5 py-1.5 text-xs text-[#052E1D] outline-none focus:border-[#07552F]"
+                          className="w-full h-[38px] px-3 bg-white border border-slate-200 rounded-[8px] text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-[#07552F]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold uppercase text-[#5b6b60] block mb-1">
+                        <label className="text-[11px] font-medium text-slate-600 block mb-1">
                           Price (₹)
                         </label>
                         <input
@@ -731,12 +783,12 @@ export default function ProductForm({ product }: Props) {
                             updated[idx].price = Number(e.target.value);
                             set("sizes", updated);
                           }}
-                          className="w-full rounded-md border border-[#cfdccf] px-2.5 py-1.5 text-xs text-[#052E1D] outline-none focus:border-[#07552F]"
+                          className="w-full h-[38px] px-3 bg-white border border-slate-200 rounded-[8px] text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-[#07552F]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold uppercase text-[#5b6b60] block mb-1">
+                        <label className="text-[11px] font-medium text-slate-600 block mb-1">
                           MRP (₹)
                         </label>
                         <input
@@ -750,7 +802,7 @@ export default function ProductForm({ product }: Props) {
                             updated[idx].mrp = Number(e.target.value);
                             set("sizes", updated);
                           }}
-                          className="w-full rounded-md border border-[#cfdccf] px-2.5 py-1.5 text-xs text-[#052E1D] outline-none focus:border-[#07552F]"
+                          className="w-full h-[38px] px-3 bg-white border border-slate-200 rounded-[8px] text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-[#07552F]"
                         />
                       </div>
 
@@ -760,7 +812,7 @@ export default function ProductForm({ product }: Props) {
                           const updated = form.sizes.filter((_, i) => i !== idx);
                           set("sizes", updated);
                         }}
-                        className="mt-4 rounded-md p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition cursor-pointer"
+                        className="mt-5 rounded-md p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition cursor-pointer"
                         title="Remove size"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -769,16 +821,19 @@ export default function ProductForm({ product }: Props) {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-[#cfdccf] p-3 text-center text-xs text-[#5b6b60]">
+                <div className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500">
                   No custom sizes added. The product will use the base price.
                 </div>
               )}
             </div>
 
+            {/* Overview / Description */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className={labelClass}>Overview / Description</label>
-                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs transition">
+                <label className="text-[13px] font-medium text-slate-700">
+                  Overview / Description
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-[#07552F] hover:bg-slate-50 cursor-pointer shadow-2xs transition">
                   <Upload className="h-3.5 w-3.5" /> Import (.txt / .md)
                   <input
                     type="file"
@@ -793,32 +848,32 @@ export default function ProductForm({ product }: Props) {
                 value={form.description}
                 onChange={(e) => set("description", e.target.value)}
                 placeholder="Brief summary of the product..."
-                className={inputClass}
+                className="w-full p-3.5 bg-white border border-slate-200 rounded-[10px] text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/15 resize-y"
               />
             </div>
           </div>
 
           {/* Rich Content Tabs (Benefits, How to Use, Ingredients, Return Policy) */}
-          <div className="space-y-6 rounded-2xl border border-[#E6EFE3] bg-white p-5 sm:p-7 shadow-xs">
-            <div className="border-b border-[#F0F5EE] pb-3">
-              <h2 className="text-base font-bold text-[#052E1D]">
+          <div className="space-y-6 rounded-[16px] border border-slate-200 bg-white p-6 shadow-xs">
+            <div className="border-b border-slate-100 pb-3">
+              <h2 className="text-lg font-semibold text-slate-900">
                 Product Page Information Tabs
               </h2>
-              <p className="mt-1 text-xs text-[#5b6b60]">
+              <p className="mt-1 text-xs text-slate-500">
                 Enter text directly (one point per line) for the product detail page tabs.
               </p>
             </div>
 
             {/* 1. Benefits */}
-            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                <label className="text-sm font-semibold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs font-bold">
                     1
                   </span>
                   Benefits
                 </label>
-                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-[#07552F] hover:bg-slate-50 cursor-pointer shadow-2xs">
                   <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
@@ -833,20 +888,20 @@ export default function ProductForm({ product }: Props) {
                 value={form.benefits}
                 onChange={(e) => set("benefits", e.target.value)}
                 placeholder="Enter each benefit on a new line..."
-                className={inputClass}
+                className="w-full p-3 bg-white border border-slate-200 rounded-[10px] text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/15 resize-y"
               />
             </div>
 
             {/* 2. How to Use */}
-            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                <label className="text-sm font-semibold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs font-bold">
                     2
                   </span>
                   How to Use
                 </label>
-                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-[#07552F] hover:bg-slate-50 cursor-pointer shadow-2xs">
                   <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
@@ -861,20 +916,20 @@ export default function ProductForm({ product }: Props) {
                 value={form.howToUse}
                 onChange={(e) => set("howToUse", e.target.value)}
                 placeholder="Instructions on dosage, application, or directions of use..."
-                className={inputClass}
+                className="w-full p-3 bg-white border border-slate-200 rounded-[10px] text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/15 resize-y"
               />
             </div>
 
             {/* 3. Ingredients / Care */}
-            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                <label className="text-sm font-semibold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs font-bold">
                     3
                   </span>
                   Ingredients / Material & Care
                 </label>
-                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-[#07552F] hover:bg-slate-50 cursor-pointer shadow-2xs">
                   <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
@@ -889,20 +944,20 @@ export default function ProductForm({ product }: Props) {
                 value={form.ingredients}
                 onChange={(e) => set("ingredients", e.target.value)}
                 placeholder="List ingredients, herbal composition, or handloom care instructions..."
-                className={inputClass}
+                className="w-full p-3 bg-white border border-slate-200 rounded-[10px] text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/15 resize-y"
               />
             </div>
 
             {/* 4. Return Policy */}
-            <div className="rounded-xl border border-[#EBF2E7] bg-[#FBFDF9] p-4 space-y-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-[#07552F] flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs">
+                <label className="text-sm font-semibold text-[#07552F] flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#07552F]/10 text-xs font-bold">
                     4
                   </span>
                   Return Policy
                 </label>
-                <label className="inline-flex items-center gap-1.5 rounded-md border border-[#cfdccf] bg-white px-2.5 py-1 text-xs font-semibold text-[#07552F] hover:bg-[#F5F8F4] cursor-pointer shadow-2xs">
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-[#07552F] hover:bg-slate-50 cursor-pointer shadow-2xs">
                   <Upload className="h-3.5 w-3.5" /> Import File
                   <input
                     type="file"
@@ -917,26 +972,26 @@ export default function ProductForm({ product }: Props) {
                 value={form.returnPolicy}
                 onChange={(e) => set("returnPolicy", e.target.value)}
                 placeholder="Return or replacement policy for this product..."
-                className={inputClass}
+                className="w-full p-3 bg-white border border-slate-200 rounded-[10px] text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-[#07552F] focus:ring-2 focus:ring-[#07552F]/15 resize-y"
               />
             </div>
           </div>
         </div>
 
         {/* Right Column: Multi-Image Cloudinary Uploader & Highlights */}
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#F0F5EE] pb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-[#052E1D]">
-                Product Images ({imageItems.length})
-              </label>
-              <span className="text-[11px] font-semibold text-[#07552F]">
-                Cloudinary Upload
+        <div className="space-y-6">
+          <div className="rounded-[16px] border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Product images ({imageItems.length})
+              </h2>
+              <span className="text-xs font-medium text-[#07552F]">
+                Cloudinary upload
               </span>
             </div>
 
             {/* Main Primary Image Preview */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4F8F1] border border-[#E6EFE3] flex items-center justify-center">
+            <div className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-slate-50 border border-slate-200 flex items-center justify-center">
               {imageItems[0]?.url ? (
                 <>
                   <img
@@ -944,7 +999,7 @@ export default function ProductForm({ product }: Props) {
                     alt="Main product preview"
                     className="w-full h-full object-cover"
                   />
-                  <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-[#07552F] px-2.5 py-1 text-[11px] font-bold text-white shadow-xs">
+                  <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-[#07552F] px-2.5 py-1 text-[11px] font-semibold text-white shadow-xs">
                     <Star className="h-3 w-3 fill-current" /> Main Image
                   </span>
                 </>
@@ -954,29 +1009,29 @@ export default function ProductForm({ product }: Props) {
                   <span className="text-xs font-medium">
                     {form.name || "No product image uploaded yet"}
                   </span>
-                  <span className="text-[11px] text-[#8BA894] mt-0.5">
+                  <span className="text-[11px] text-slate-400 mt-0.5">
                     Shows clean placeholder on store until uploaded
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Multi-file Upload Button */}
+            {/* Multi-file Upload Button: fixed height, dashed border, centered icon & text on one line */}
             <div>
               <label
-                className={`w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#07552F]/40 bg-[#F9FCF8] px-4 py-3 text-xs sm:text-sm font-semibold text-[#07552F] transition hover:border-[#07552F] hover:bg-[#F0F7EE] ${
+                className={`w-full h-11 inline-flex items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-[#07552F]/40 bg-[#F9FCF8] px-4 text-xs sm:text-sm font-medium text-[#07552F] transition hover:border-[#07552F] hover:bg-[#F0F7EE] whitespace-nowrap ${
                   uploadingImages ? "pointer-events-none opacity-60" : "cursor-pointer"
                 }`}
               >
                 {uploadingImages ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{uploadProgressText || "Uploading to Cloudinary..."}</span>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    <span className="truncate">{uploadProgressText || "Uploading..."}</span>
                   </>
                 ) : (
                   <>
-                    <Upload className="h-4 w-4" />
-                    <span>Upload Image(s) (One or Many, max 5 MB)</span>
+                    <Upload className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Upload images (max 5 MB)</span>
                   </>
                 )}
                 <input
@@ -1001,7 +1056,7 @@ export default function ProductForm({ product }: Props) {
             {/* Uploaded Images List with Set Main, Reorder, and Remove */}
             {imageItems.length > 0 && (
               <div className="space-y-2.5 pt-1">
-                <p className="text-[11px] font-medium text-[#5b6b60]">
+                <p className="text-[11px] font-medium text-slate-500">
                   First image (#1) is shown on listing pages. All images appear in the product detail gallery.
                 </p>
 
@@ -1015,10 +1070,10 @@ export default function ProductForm({ product }: Props) {
                       className={`flex items-center gap-2.5 rounded-xl border p-2.5 transition ${
                         isMain
                           ? "border-[#07552F] bg-[#F4F8F1]"
-                          : "border-[#E6EFE3] bg-white"
+                          : "border-slate-200 bg-white"
                       }`}
                     >
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#cfdccf] bg-[#F5F8F4]">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[8px] border border-slate-200 bg-slate-50">
                         <img
                           src={optimizeCloudinaryUrl(item.url, 160)}
                           alt={`Product photo ${idx + 1}`}
@@ -1028,7 +1083,7 @@ export default function ProductForm({ product }: Props) {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-[#052E1D]">
+                          <span className="text-xs font-semibold text-slate-900">
                             Image #{idx + 1}
                           </span>
                           {isMain && (
@@ -1043,7 +1098,7 @@ export default function ProductForm({ product }: Props) {
                             <button
                               type="button"
                               onClick={() => handleSetMainImage(idx)}
-                              className="inline-flex items-center gap-1 rounded-md border border-[#07552F]/30 bg-white px-2 py-0.5 text-[11px] font-semibold text-[#07552F] hover:bg-[#07552F] hover:text-white transition cursor-pointer"
+                              className="inline-flex items-center gap-1 rounded-md border border-[#07552F]/30 bg-white px-2 py-0.5 text-[11px] font-medium text-[#07552F] hover:bg-[#07552F] hover:text-white transition cursor-pointer"
                               title="Make this the main image"
                             >
                               <Star className="h-3 w-3" /> Set as Main
@@ -1054,7 +1109,7 @@ export default function ProductForm({ product }: Props) {
                             type="button"
                             disabled={idx === 0}
                             onClick={() => handleMoveImage(idx, -1)}
-                            className="rounded-md border border-gray-200 bg-white p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            className="rounded-md border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
                             title="Move up"
                           >
                             <ArrowUp className="h-3 w-3" />
@@ -1064,7 +1119,7 @@ export default function ProductForm({ product }: Props) {
                             type="button"
                             disabled={idx === imageItems.length - 1}
                             onClick={() => handleMoveImage(idx, 1)}
-                            className="rounded-md border border-gray-200 bg-white p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            className="rounded-md border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
                             title="Move down"
                           >
                             <ArrowDown className="h-3 w-3" />
@@ -1092,37 +1147,35 @@ export default function ProductForm({ product }: Props) {
             )}
           </div>
 
-          {/* Featured Highlighting Card */}
-          <div className="rounded-2xl border border-[#E6EFE3] bg-white p-5 shadow-xs">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#052E1D]">
-              Homepage Highlighting
-            </label>
-            <label className="mt-3 flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.featured}
-                onChange={(e) => set("featured", e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-[#cfdccf] text-[#07552F] focus:ring-[#07552F]"
-              />
+          {/* Featured Highlighting Card with ToggleSwitch */}
+          <div className="rounded-[16px] border border-slate-200 bg-white p-6 shadow-xs space-y-3">
+            <h2 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3">
+              Homepage highlighting
+            </h2>
+            <div className="flex items-center justify-between pt-1">
               <div>
-                <span className="text-sm font-semibold text-[#052E1D] flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Featured / Best Seller
+                <span className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Featured / Best seller
                 </span>
-                <p className="text-xs text-[#5b6b60] mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Feature this product in the homepage Best Sellers showcase.
                 </p>
               </div>
-            </label>
+              <ToggleSwitch
+                checked={Boolean(form.featured)}
+                onChange={(checked) => set("featured", checked)}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Bottom action bar for convenient submission */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[#E6EFE3] bg-white p-4 sm:p-5 shadow-xs">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5 shadow-xs">
         <button
           type="button"
           onClick={() => router.push("/admin/products")}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5b6b60] hover:text-[#07552F] cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-[#07552F] cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to products
         </button>
@@ -1131,14 +1184,14 @@ export default function ProductForm({ product }: Props) {
           <button
             type="button"
             onClick={() => router.push("/admin/products")}
-            className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#052E1D] transition hover:bg-[#F5F8F4] cursor-pointer"
+            className="h-[42px] rounded-[10px] border border-slate-200 bg-white px-4 text-xs sm:text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             disabled={saving || success || uploadingImages}
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07552F] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
+            className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[10px] bg-[#07552F] px-5 sm:px-6 text-xs sm:text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
           >
             {saving ? (
               "Saving..."
