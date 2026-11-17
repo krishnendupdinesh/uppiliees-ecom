@@ -10,7 +10,12 @@ import {
   getVisitorAnalytics,
 } from "@/lib/admin/db";
 
-const inr = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const inr = (n: unknown) => {
+  if (n === undefined || n === null) return "₹0";
+  const num = Number(n);
+  const safe = Number.isFinite(num) ? num : 0;
+  return `₹${safe.toLocaleString("en-IN")}`;
+};
 
 export default async function DashboardContent() {
   await connection();

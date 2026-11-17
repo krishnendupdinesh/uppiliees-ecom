@@ -25,7 +25,12 @@ import type { Product } from "@/lib/admin/types";
 import { optimizeCloudinaryUrl } from "@/lib/format";
 import { api } from "@/lib/api";
 
-const inr = (n: number | undefined | null) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const inr = (n: unknown) => {
+  if (n === undefined || n === null) return "₹0";
+  const num = Number(n);
+  const safe = Number.isFinite(num) ? num : 0;
+  return `₹${safe.toLocaleString("en-IN")}`;
+};
 
 export default function ProductListClient({ initialProducts }: { initialProducts: Product[] }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -349,7 +354,7 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                           {p.name}
                         </div>
                         <div className="text-xs text-[#5b6b60]">
-                          {p.category} · {inr(p.price)}
+                          {p.category} · {inr(p.selling_price ?? p.price)}
                         </div>
                       </div>
                     </div>
@@ -502,7 +507,15 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                           {p.subcategory && p.subcategory !== p.category ? ` • ${p.subcategory}` : ""}
                         </p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          <span className="text-base font-bold text-[#07552F]">{inr(p.price)}</span>
+                          <span className="text-base font-bold text-[#07552F]">{inr(p.selling_price ?? p.price)}</span>
+                          {p.mrp > (p.selling_price ?? p.price) && (
+                            <span className="text-xs text-[#8BA894] line-through">{inr(p.mrp)}</span>
+                          )}
+                          {Number(p.discount_percent || 0) > 0 && (
+                            <span className="inline-flex rounded-full bg-[#EBF3E8] px-2 py-0.5 text-[11px] font-semibold text-[#07552F]">
+                              {Number(p.discount_percent)}% OFF
+                            </span>
+                          )}
                           {/* Stock Badges */}
                           <span
                             className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -568,7 +581,9 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                 <tr>
                   <th className="px-5 py-3.5 font-semibold">Product</th>
                   <th className="px-5 py-3.5 font-semibold">Category</th>
-                  <th className="px-5 py-3.5 font-semibold">Price</th>
+                  <th className="px-5 py-3.5 font-semibold">MRP</th>
+                  <th className="px-5 py-3.5 font-semibold">Discount %</th>
+                  <th className="px-5 py-3.5 font-semibold">Selling Price</th>
                   <th className="px-5 py-3.5 font-semibold">Stock</th>
                   <th className="px-5 py-3.5 font-semibold">Status</th>
                   <th className="px-5 py-3.5 text-right font-semibold">Actions</th>
@@ -577,7 +592,7 @@ export default function ProductListClient({ initialProducts }: { initialProducts
               <tbody className="divide-y divide-[#E6EFE3]">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-[#5b6b60]">
+                    <td colSpan={8} className="px-5 py-12 text-center text-[#5b6b60]">
                       <Package className="mx-auto h-8 w-8 text-[#8BA894]" />
                       <p className="mt-2 text-sm">No products found matching your filter.</p>
                     </td>
@@ -587,6 +602,7 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                     const thumbUrl = optimizeCloudinaryUrl(p.image, 120);
                     const hasValidImg = Boolean(thumbUrl) && !imgErrorMap[p.id];
                     const isActive = p.is_active ?? true;
+                    const sellingPrice = p.selling_price ?? p.price;
 
                     return (
                       <tr key={p.id} className="transition hover:bg-[#F9FCF7]/70">
@@ -620,13 +636,18 @@ export default function ProductListClient({ initialProducts }: { initialProducts
                           </div>
                         </td>
                         <td className="px-5 py-3.5 text-[#5b6b60]">{p.category}</td>
+                        <td className="px-5 py-3.5 text-[#5b6b60] font-medium">{inr(p.mrp)}</td>
                         <td className="px-5 py-3.5">
-                          <span className="font-semibold text-[#052E1D]">{inr(p.price)}</span>
-                          {p.mrp > p.price && (
-                            <span className="ml-1.5 text-xs text-[#8BA894] line-through">
-                              {inr(p.mrp)}
+                          {Number(p.discount_percent || 0) > 0 ? (
+                            <span className="inline-flex rounded-full bg-[#EBF3E8] px-2 py-0.5 text-xs font-semibold text-[#07552F]">
+                              {Number(p.discount_percent)}% OFF
                             </span>
+                          ) : (
+                            <span className="text-xs text-[#8BA894]">0%</span>
                           )}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="font-bold text-[#07552F]">{inr(sellingPrice)}</span>
                         </td>
                         <td className="px-5 py-3.5">
                           <span

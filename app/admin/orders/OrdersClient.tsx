@@ -18,7 +18,12 @@ import OrderStatusSelect from "@/components/admin/OrderStatusSelect";
 import Modal from "@/components/admin/Modal";
 import type { Order, OrderStatus } from "@/lib/admin/types";
 
-const inr = (n: number | undefined | null) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const inr = (n: unknown) => {
+  if (n === undefined || n === null) return "₹0";
+  const num = Number(n);
+  const safe = Number.isFinite(num) ? num : 0;
+  return `₹${safe.toLocaleString("en-IN")}`;
+};
 
 export default function OrdersClient({ initialOrders }: { initialOrders: Order[] }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);

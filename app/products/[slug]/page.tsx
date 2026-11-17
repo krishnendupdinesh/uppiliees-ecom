@@ -8,6 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductGallery from "@/components/ProductGallery";
 import ProductTabs, { type ProductTab } from "@/components/ProductTabs";
 import ProductReviews from "@/components/ProductReviews";
+import PriceBlock from "@/components/PriceBlock";
 
 import {
   collections,
@@ -74,16 +75,23 @@ export default async function ProductPage({ params }: { params: Params }) {
   }
 
   const catSlug = apiProduct.category_slug || "herbal-beauty";
-  const safePrice = safeNumber(apiProduct.price, 0);
-  const safeMrp = safeNumber(apiProduct.mrp, safePrice);
+  const sellingPrice = safeNumber(apiProduct.selling_price ?? apiProduct.price, 0);
+  const safeMrp = safeNumber(apiProduct.mrp, sellingPrice);
+  const discountPercent = apiProduct.discount_percent !== undefined && Number.isFinite(Number(apiProduct.discount_percent))
+    ? Math.round(Number(apiProduct.discount_percent))
+    : safeMrp > sellingPrice && safeMrp > 0
+    ? Math.round(((safeMrp - sellingPrice) / safeMrp) * 100)
+    : 0;
 
   const product: Product = {
     id: apiProduct.id,
     name: apiProduct.name,
     slug: apiProduct.slug,
     category: apiProduct.subcategory || apiProduct.category_name || "General",
-    price: safePrice,
+    price: sellingPrice,
+    selling_price: sellingPrice,
     mrp: safeMrp,
+    discount_percent: discountPercent,
     description: apiProduct.description || undefined,
     collectionSlug: catSlug,
     image: apiProduct.image_url || apiProduct.image || "",
@@ -238,27 +246,19 @@ export default async function ProductPage({ params }: { params: Params }) {
             )}
 
             {/* Price */}
-            <div className="flex items-center flex-wrap gap-3 mt-6">
-              <span className="text-3xl sm:text-4xl font-bold text-[#063D27]">
-                {formatPrice(product.price)}
-              </span>
-
-              {product.mrp > product.price && (
-                <span className="text-lg text-gray-400 line-through">
-                  {formatPrice(product.mrp)}
-                </span>
-              )}
-
-              {discount > 0 && (
-                <span className="text-sm font-bold text-green-800 bg-green-100 px-3 py-1 rounded-full">
-                  {discount}% OFF
-                </span>
-              )}
+            <div className="mt-6">
+              <PriceBlock
+                sellingPrice={product.selling_price ?? product.price}
+                mrp={product.mrp}
+                discountPercent={product.discount_percent ?? discount}
+                size="lg"
+                showBadge={true}
+              />
             </div>
 
             {discount > 0 && (
               <p className="text-sm font-semibold text-[#4D9A18] mt-2">
-                You save {formatPrice(product.mrp - product.price)}
+                You save {formatPrice(product.mrp - (product.selling_price ?? product.price))}
               </p>
             )}
 

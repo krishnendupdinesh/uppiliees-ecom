@@ -5,6 +5,8 @@ import {
   fetchProductsFromDb,
   fetchProductByIdOrSlugFromDb,
   safeNumber,
+  calculateSellingPrice,
+  slugify,
 } from "@/lib/products-db";
 import {
   fetchAllOrdersFromDb,
@@ -19,13 +21,9 @@ import type {
   VisitorAnalytics,
   Coupon,
   ContactMessage,
+  Category,
+  Section,
 } from "./types";
-
-export interface Category {
-  id: number;
-  name: string;
-  slug: string;
-}
 
 export interface AdminUserRecord {
   id: string | number;
@@ -40,8 +38,13 @@ export interface AdminUserRecord {
 }
 
 function mapDbProductToAdmin(p: any): Product {
-  const price = safeNumber(p.price, 0);
-  const mrp = safeNumber(p.mrp, price);
+  const mrp = safeNumber(p.mrp !== undefined && p.mrp !== null ? p.mrp : p.price, 0);
+  const discountPercent = safeNumber(p.discount_percent, 0);
+  const calculatedSelling = calculateSellingPrice(mrp, discountPercent);
+  const sellingPrice = p.selling_price !== undefined && p.selling_price !== null && Number(p.selling_price) >= 0
+    ? safeNumber(p.selling_price, calculatedSelling)
+    : calculatedSelling;
+  const price = safeNumber(sellingPrice, safeNumber(p.price, 0));
   const stock = safeNumber(p.stock, 0);
   const inStock = p.in_stock !== undefined ? Boolean(p.in_stock) && stock > 0 : stock > 0;
   const isActive = p.is_active !== undefined ? Boolean(p.is_active) : true;
@@ -59,6 +62,8 @@ function mapDbProductToAdmin(p: any): Product {
     subcategory: p.subcategory || p.category || "",
     price,
     mrp,
+    discount_percent: discountPercent,
+    selling_price: price,
     stock,
     in_stock: inStock,
     is_active: isActive,
@@ -85,23 +90,181 @@ function mapDbProductToAdmin(p: any): Product {
   };
 }
 
+export async function getMenuFromDb(): Promise<Section[]> {
+  await connection();
+  try {
+    const [rows] = await pool.execute<RowDataPacket[]>(`
+      SELECT 
+        s.id AS section_id,
+        s.name AS section_name,
+        s.slug AS section_slug,
+        s.sort_order,
+        c.id AS category_id,
+        c.name AS category_name,
+        c.slug AS category_slug,
+        c.is_active
+      FROM sections s
+      LEFT JOIN categories c ON c.section_id = s.id AND (c.is_active = TRUE OR c.is_active IS NULL)
+      ORDER BY s.sort_order ASC, c.name ASC
+    `);
+
+    if (rows.length === 0) {
+      return [
+        {
+          id: 1,
+          name: "Herbal & Wellness",
+          slug: "herbal-wellness",
+          sort_order: 1,
+          categories: [
+            { id: 1, name: "Pain Relief", slug: "pain-relief" },
+            { id: 2, name: "Baby Care", slug: "baby-care" },
+            { id: 3, name: "Hair Care", slug: "hair-care" },
+            { id: 4, name: "Skin Care", slug: "skin-care" },
+            { id: 5, name: "Wellness Powders", slug: "wellness-powders" },
+            { id: 6, name: "Home Care", slug: "home-care" },
+          ],
+        },
+        {
+          id: 2,
+          name: "Kerala Food Products",
+          slug: "kerala-food-products",
+          sort_order: 2,
+          categories: [
+            { id: 7, name: "Powders", slug: "powders" },
+            { id: 8, name: "Chips & Sweets", slug: "chips-sweets" },
+            { id: 9, name: "Pickle, Ghee & Lard", slug: "pickle-ghee-lard" },
+            { id: 10, name: "Dried Foods", slug: "dried-foods" },
+          ],
+        },
+        {
+          id: 3,
+          name: "Handloom",
+          slug: "handloom",
+          sort_order: 3,
+          categories: [
+            { id: 11, name: "Sarees", slug: "sarees" },
+            { id: 12, name: "Set Mundu", slug: "set-mundu" },
+            { id: 13, name: "Dhotis", slug: "dhotis" },
+          ],
+        },
+      ];
+    }
+
+    const sectionMap = new Map<number, Section>();
+    for (const r of rows) {
+      const sId = Number(r.section_id);
+      if (!sectionMap.has(sId)) {
+        sectionMap.set(sId, {
+          id: sId,
+          name: String(r.section_name),
+          slug: String(r.section_slug),
+          sort_order: Number(r.sort_order || 0),
+          categories: [],
+        });
+      }
+      if (r.category_id && r.category_name) {
+        sectionMap.get(sId)!.categories.push({
+          id: Number(r.category_id),
+          name: String(r.category_name),
+          slug: String(r.category_slug),
+        });
+      }
+    }
+    return Array.from(sectionMap.values());
+  } catch (err) {
+    console.error("getMenuFromDb error:", err);
+    return [];
+  }
+}
+
 export async function getCategories(): Promise<Category[]> {
   await connection();
   try {
-    const [rows] = await pool.execute<RowDataPacket[]>(
-      "SELECT id, name, slug FROM categories ORDER BY id ASC"
-    );
+    const [rows] = await pool.execute<RowDataPacket[]>(`
+      SELECT 
+        c.id, 
+        c.name, 
+        c.slug, 
+        c.section_id,
+        s.name AS section_name,
+        s.slug AS section_slug,
+        c.is_active,
+        c.image, 
+        c.subtitle, 
+        c.created_at
+      FROM categories c
+      LEFT JOIN sections s ON s.id = c.section_id
+      WHERE c.is_active = TRUE OR c.is_active IS NULL
+      ORDER BY COALESCE(s.sort_order, 1) ASC, c.name ASC
+    `);
     return rows.map((r) => ({
       id: Number(r.id),
       name: String(r.name),
       slug: String(r.slug),
+      section_id: Number(r.section_id || 1),
+      section_name: r.section_name ? String(r.section_name) : undefined,
+      section_slug: r.section_slug ? String(r.section_slug) : undefined,
+      is_active: r.is_active !== undefined ? Boolean(r.is_active) : true,
+      image: r.image ? String(r.image) : null,
+      subtitle: r.subtitle ? String(r.subtitle) : null,
+      created_at: r.created_at ? new Date(r.created_at).toISOString() : undefined,
     }));
   } catch {
     return [
-      { id: 1, name: "Herbal & Beauty", slug: "herbal-beauty" },
-      { id: 2, name: "Traditional Food", slug: "traditional-foods" },
-      { id: 3, name: "Handloom", slug: "handloom" },
+      { id: 1, name: "Pain Relief", slug: "pain-relief", section_id: 1, is_active: true },
+      { id: 2, name: "Baby Care", slug: "baby-care", section_id: 1, is_active: true },
+      { id: 3, name: "Hair Care", slug: "hair-care", section_id: 1, is_active: true },
+      { id: 4, name: "Skin Care", slug: "skin-care", section_id: 1, is_active: true },
+      { id: 5, name: "Wellness Powders", slug: "wellness-powders", section_id: 1, is_active: true },
+      { id: 6, name: "Home Care", slug: "home-care", section_id: 1, is_active: true },
+      { id: 7, name: "Powders", slug: "powders", section_id: 2, is_active: true },
+      { id: 8, name: "Chips & Sweets", slug: "chips-sweets", section_id: 2, is_active: true },
+      { id: 9, name: "Pickle, Ghee & Lard", slug: "pickle-ghee-lard", section_id: 2, is_active: true },
+      { id: 10, name: "Dried Foods", slug: "dried-foods", section_id: 2, is_active: true },
+      { id: 11, name: "Sarees", slug: "sarees", section_id: 3, is_active: true },
+      { id: 12, name: "Set Mundu", slug: "set-mundu", section_id: 3, is_active: true },
+      { id: 13, name: "Dhotis", slug: "dhotis", section_id: 3, is_active: true },
     ];
+  }
+}
+
+export async function getAdminCategories(): Promise<Category[]> {
+  await connection();
+  try {
+    const [rows] = await pool.execute<RowDataPacket[]>(`
+      SELECT 
+        c.id, 
+        c.name, 
+        c.slug, 
+        c.section_id,
+        s.name AS section_name,
+        s.slug AS section_slug,
+        c.is_active,
+        c.image, 
+        c.subtitle, 
+        c.created_at,
+        COUNT(p.id) AS product_count
+      FROM categories c
+      LEFT JOIN sections s ON s.id = c.section_id
+      LEFT JOIN products p ON c.id = p.category_id
+      GROUP BY c.id, c.name, c.slug, c.section_id, s.name, s.slug, c.is_active, c.image, c.subtitle, c.created_at
+      ORDER BY COALESCE(s.sort_order, 1) ASC, c.name ASC
+    `);
+    return rows.map((r) => ({
+      id: Number(r.id),
+      name: String(r.name),
+      slug: String(r.slug),
+      section_id: Number(r.section_id || 1),
+      section_name: r.section_name ? String(r.section_name) : undefined,
+      section_slug: r.section_slug ? String(r.section_slug) : undefined,
+      is_active: r.is_active !== undefined ? Boolean(r.is_active) : true,
+      image: r.image ? String(r.image) : null,
+      subtitle: r.subtitle ? String(r.subtitle) : null,
+      created_at: r.created_at ? new Date(r.created_at).toISOString() : undefined,
+      product_count: Number(r.product_count || 0),
+    }));
+  } catch {
+    return getCategories();
   }
 }
 
@@ -594,4 +757,173 @@ export async function getUsersAndCustomers(): Promise<AdminUserRecord[]> {
     console.error("getUsersAndCustomers DB error:", err);
     return [];
   }
+}
+
+// Generates a unique slug for a category
+async function generateUniqueCategorySlug(name: string, excludeId?: number): Promise<string> {
+  const baseSlug = slugify(name) || `category-${Date.now()}`;
+  let candidate = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    let sql = "SELECT id FROM categories WHERE slug = ?";
+    const params: any[] = [candidate];
+    if (excludeId !== undefined) {
+      sql += " AND id != ?";
+      params.push(excludeId);
+    }
+    const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
+    if (rows.length === 0) return candidate;
+    counter += 1;
+    candidate = `${baseSlug}-${counter}`;
+  }
+}
+
+// Creates a new category (validates unique name and auto-makes slug)
+export async function createCategory(data: {
+  name: string;
+  section_id?: number;
+  is_active?: boolean;
+  image?: string | null;
+}): Promise<Category> {
+  await connection();
+  const name = String(data.name || "").trim();
+  if (!name) {
+    throw new Error("Category name is required");
+  }
+
+  // Check unique name
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    "SELECT id FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1",
+    [name]
+  );
+  if (existing.length > 0) {
+    throw new Error("A category with this name already exists");
+  }
+
+  const slug = await generateUniqueCategorySlug(name);
+  const sectionId = Number(data.section_id) || 1;
+  const isActive = data.is_active !== undefined ? Boolean(data.is_active) : true;
+  const image = data.image ? String(data.image).trim() : null;
+
+  let insertId = 0;
+  try {
+    const [res] = await pool.execute<ResultSetHeader>(
+      "INSERT INTO categories (name, slug, section_id, is_active, image) VALUES (?, ?, ?, ?, ?)",
+      [name, slug, sectionId, isActive, image]
+    );
+    insertId = res.insertId;
+  } catch {
+    const [res] = await pool.execute<ResultSetHeader>(
+      "INSERT INTO categories (name, slug, image) VALUES (?, ?, ?)",
+      [name, slug, image]
+    );
+    insertId = res.insertId;
+  }
+
+  return {
+    id: insertId,
+    name,
+    slug,
+    section_id: sectionId,
+    is_active: isActive,
+    image,
+    product_count: 0,
+  };
+}
+
+// Updates an existing category
+export async function updateCategory(
+  id: number | string,
+  data: {
+    name: string;
+    section_id?: number;
+    is_active?: boolean;
+    image?: string | null;
+  }
+): Promise<Category> {
+  await connection();
+  const catId = Number(id);
+  const name = String(data.name || "").trim();
+  if (!name) {
+    throw new Error("Category name is required");
+  }
+
+  // Check category exists
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    "SELECT * FROM categories WHERE id = ? LIMIT 1",
+    [catId]
+  );
+  if (existing.length === 0) {
+    throw new Error("Category not found");
+  }
+
+  // Check unique name
+  const [duplicate] = await pool.execute<RowDataPacket[]>(
+    "SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND id != ? LIMIT 1",
+    [name, catId]
+  );
+  if (duplicate.length > 0) {
+    throw new Error("A category with this name already exists");
+  }
+
+  let slug = existing[0].slug;
+  if (name.toLowerCase() !== existing[0].name.toLowerCase()) {
+    slug = await generateUniqueCategorySlug(name, catId);
+  }
+
+  const image = data.image !== undefined ? (data.image ? String(data.image).trim() : null) : existing[0].image;
+  const sectionId = data.section_id !== undefined ? Number(data.section_id) : (existing[0].section_id || 1);
+  const isActive = data.is_active !== undefined ? Boolean(data.is_active) : (existing[0].is_active !== undefined ? Boolean(existing[0].is_active) : true);
+
+  try {
+    await pool.execute(
+      "UPDATE categories SET name = ?, slug = ?, section_id = ?, is_active = ?, image = ? WHERE id = ?",
+      [name, slug, sectionId, isActive, image, catId]
+    );
+  } catch {
+    await pool.execute(
+      "UPDATE categories SET name = ?, slug = ?, image = ? WHERE id = ?",
+      [name, slug, image, catId]
+    );
+  }
+
+  return {
+    id: catId,
+    name,
+    slug,
+    section_id: sectionId,
+    is_active: isActive,
+    image,
+  };
+}
+
+// Deletes a category (blocks delete if products exist)
+export async function deleteCategory(id: number | string): Promise<{ success: boolean; message: string }> {
+  await connection();
+  const catId = Number(id);
+
+  // Check if category exists
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    "SELECT id FROM categories WHERE id = ? LIMIT 1",
+    [catId]
+  );
+  if (existing.length === 0) {
+    throw new Error("Category not found");
+  }
+
+  // Check if products exist in this category
+  const [prodRows] = await pool.execute<RowDataPacket[]>(
+    "SELECT COUNT(*) AS count FROM products WHERE category_id = ?",
+    [catId]
+  );
+  const count = Number(prodRows[0]?.count || 0);
+  if (count > 0) {
+    throw new Error(
+      `Cannot delete category because it contains ${count} product${count === 1 ? "" : "s"}. Please delete or reassign products first.`
+    );
+  }
+
+  await pool.execute("DELETE FROM categories WHERE id = ?", [catId]);
+  return { success: true, message: "Category deleted successfully" };
 }

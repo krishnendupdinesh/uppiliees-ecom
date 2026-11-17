@@ -11,7 +11,9 @@ import CartControl from "./CartControl";
 export type ProductSizeVariant = {
   size: string;
   price: number;
+  selling_price?: number;
   mrp?: number;
+  discount_percent?: number;
   stock?: number;
 };
 
@@ -59,7 +61,9 @@ export default function ProductActions({
   const [variantError, setVariantError] = useState("");
 
   const currentSizeObj = hasCustomSizes ? customSizes[selectedSizeIndex] : undefined;
-  const currentPrice = currentSizeObj ? currentSizeObj.price : product?.price || 0;
+  const currentPrice = currentSizeObj
+    ? (currentSizeObj.selling_price ?? currentSizeObj.price)
+    : (product?.selling_price ?? product?.price ?? 0);
   const currentMrp = currentSizeObj ? (currentSizeObj.mrp || currentSizeObj.price) : product?.mrp || currentPrice;
   const isOutOfStock = currentSizeObj?.stock !== undefined ? currentSizeObj.stock === 0 : (product as any)?.stock === 0;
 

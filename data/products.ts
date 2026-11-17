@@ -10,8 +10,11 @@ export type Product = {
   name: string;
   slug: string; // image file name AND the last part of the product URL
   category: string; // sub-category shown on the card (e.g. "Hair Care")
-  price: number; // selling price in INR (dummy)
-  mrp: number; // original price in INR (dummy)
+  subcategory?: string;
+  price: number; // selling price in INR
+  mrp: number; // original MRP in INR
+  discount_percent?: number; // discount percentage (0 to 100)
+  selling_price?: number; // selling price calculated from MRP and discount %
   description?: string; // optional - shown on the product page when present
   collectionSlug?: string; // optional - overrides collection.slug when listed in allProducts
   image?: string;

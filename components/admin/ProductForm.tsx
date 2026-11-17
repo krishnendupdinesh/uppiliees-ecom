@@ -36,7 +36,9 @@ export default function ProductForm({ product }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<
+    { id: number; name: string; slug: string; section_name?: string }[]
+  >([]);
 
   // Image uploader state (one or many images)
   const initialImageItems: UploadedImageItem[] = (() => {
@@ -60,14 +62,18 @@ export default function ProductForm({ product }: Props) {
   const [uploadError, setUploadError] = useState("");
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
 
+  const initialMrp = product?.mrp ? Number(product.mrp) : product?.price ? Number(product.price) : 0;
+  const initialDiscount = product?.discount_percent !== undefined ? Number(product.discount_percent) : 0;
+
   const [form, setForm] = useState({
     name: product?.name ?? "",
     slug: product?.slug ?? "",
     category_id: product?.category_id ?? 1,
     category_name: product?.category ?? "",
     subcategory: product?.subcategory ?? "",
-    price: product?.price ?? 0,
-    mrp: product?.mrp ?? 0,
+    mrp: initialMrp,
+    discount_percent: initialDiscount,
+    price: product?.selling_price ?? product?.price ?? initialMrp,
     stock: product?.stock ?? 25,
     in_stock: product?.in_stock ?? (product ? product.stock > 0 : true),
     is_active: product?.is_active ?? true,
@@ -87,6 +93,14 @@ export default function ProductForm({ product }: Props) {
     ingredients: product?.ingredients ?? "",
     returnPolicy: product?.returnPolicy ?? "",
   });
+
+  // Live calculated selling price: mrp - (mrp * discount_percent / 100), rounded to 2 decimals
+  const liveSellingPrice = Math.max(
+    0,
+    Math.round(
+      (Number(form.mrp || 0) - (Number(form.mrp || 0) * Number(form.discount_percent || 0)) / 100) * 100
+    ) / 100
+  );
 
   useEffect(() => {
     api<any[]>("/api/categories")
@@ -248,6 +262,20 @@ export default function ProductForm({ product }: Props) {
     setSuccess(false);
 
     try {
+      const mrpVal = Number(form.mrp);
+      if (!Number.isFinite(mrpVal) || mrpVal <= 0) {
+        setError("MRP must be a number greater than 0.");
+        setSaving(false);
+        return;
+      }
+
+      const discountVal = Number(form.discount_percent || 0);
+      if (!Number.isFinite(discountVal) || discountVal < 0 || discountVal > 100) {
+        setError("Discount percent must be between 0 and 100.");
+        setSaving(false);
+        return;
+      }
+
       const selectedCat = categories.find((c) => c.id === Number(form.category_id));
       const cleanImages = imageItems.filter((item) => item.url.trim().length > 0);
       const imageList = cleanImages.map((item) => item.url.trim());
@@ -275,11 +303,10 @@ export default function ProductForm({ product }: Props) {
           form.category_name ||
           "General"
         ).trim(),
-        price: validSizes.length > 0 ? validSizes[0].price : Number(form.price || 0),
-        mrp:
-          validSizes.length > 0
-            ? validSizes[0].mrp || validSizes[0].price
-            : Number(form.mrp || form.price || 0),
+        mrp: mrpVal,
+        discount_percent: discountVal,
+        selling_price: liveSellingPrice,
+        price: liveSellingPrice,
         stock: Number(form.stock ?? 0),
         in_stock: Boolean(form.in_stock) && Number(form.stock ?? 0) > 0,
         is_active: Boolean(form.is_active),
@@ -303,12 +330,12 @@ export default function ProductForm({ product }: Props) {
       const requestBody = JSON.stringify(payload);
 
       if (product) {
-        await api(`/api/products/${product.id}`, {
+        await api(`/api/admin/products/${product.id}`, {
           method: "PUT",
           body: requestBody,
         });
       } else {
-        await api("/api/products", {
+        await api("/api/admin/products", {
           method: "POST",
           body: requestBody,
         });
@@ -318,7 +345,7 @@ export default function ProductForm({ product }: Props) {
       setTimeout(() => {
         router.push("/admin/products");
         router.refresh();
-      }, 600);
+      }, 1000);
     } catch (err: any) {
       setError(err.message || "Could not save the product. Please try again.");
     } finally {
@@ -333,42 +360,62 @@ export default function ProductForm({ product }: Props) {
   return (
     <form onSubmit={submit} className="space-y-6">
       {/* Top action header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
         <button
           type="button"
           onClick={() => router.push("/admin/products")}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#07552F] hover:underline cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5b6b60] hover:text-[#07552F] mb-3 transition cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to products
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to products
         </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => router.push("/admin/products")}
-            className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-sm font-medium text-[#052E1D] transition hover:bg-[#F5F8F4] cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            disabled={saving || success || uploadingImages}
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07552F] px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
-          >
-            {saving ? (
-              "Saving..."
-            ) : success ? (
-              <>
-                <Check className="h-4 w-4" /> Saved!
-              </>
-            ) : product ? (
-              "Update Product"
-            ) : (
-              "Create Product"
-            )}
-          </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-[#052E1D]">
+              {product ? "Edit product" : "New product"}
+            </h1>
+            <p className="text-xs text-[#5b6b60] mt-0.5">
+              {product
+                ? "Update product details, pricing, stock, and media."
+                : "Create and publish a new handcrafted Kerala product."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => router.push("/admin/products")}
+              className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#052E1D] transition hover:bg-[#F5F8F4] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              disabled={saving || success || uploadingImages}
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07552F] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
+            >
+              {saving ? (
+                "Saving..."
+              ) : success ? (
+                <>
+                  <Check className="h-4 w-4" /> Saved!
+                </>
+              ) : product ? (
+                "Update Product"
+              ) : (
+                "Create Product"
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {success && (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span>Product saved successfully! Redirecting to products list...</span>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -426,10 +473,21 @@ export default function ProductForm({ product }: Props) {
                   }}
                   className={inputClass}
                 >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
+                  {Object.entries(
+                    categories.reduce((acc, cat) => {
+                      const sec = cat.section_name || "Categories";
+                      if (!acc[sec]) acc[sec] = [];
+                      acc[sec].push(cat);
+                      return acc;
+                    }, {} as Record<string, typeof categories>)
+                  ).map(([sectionName, cats]) => (
+                    <optgroup key={sectionName} label={sectionName}>
+                      {cats.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -456,30 +514,50 @@ export default function ProductForm({ product }: Props) {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            {/* Pricing Section: MRP + Discount % = Selling Price (Read Only), plus Stock */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className={labelClass}>Selling Price (₹) *</label>
+                <label className={labelClass}>MRP / Original Price (₹) *</label>
                 <input
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   required
-                  value={form.price}
-                  onChange={(e) => set("price", Number(e.target.value))}
+                  placeholder="e.g. 1000"
+                  value={form.mrp === 0 && !product ? "" : form.mrp}
+                  onChange={(e) => set("mrp", e.target.value === "" ? "" : Number(e.target.value))}
                   className={inputClass}
                 />
               </div>
+
               <div>
-                <label className={labelClass}>MRP / Original Price (₹)</label>
+                <label className={labelClass}>Discount % (0 to 100)</label>
                 <input
                   type="number"
                   min="0"
+                  max="100"
                   step="0.01"
-                  value={form.mrp}
-                  onChange={(e) => set("mrp", Number(e.target.value))}
+                  placeholder="e.g. 20"
+                  value={form.discount_percent === 0 ? "0" : form.discount_percent || ""}
+                  onChange={(e) => set("discount_percent", e.target.value === "" ? "" : Number(e.target.value))}
                   className={inputClass}
                 />
               </div>
+
+              <div>
+                <label className={labelClass}>Selling Price (₹) [Read Only]</label>
+                <input
+                  type="number"
+                  readOnly
+                  disabled
+                  value={liveSellingPrice}
+                  className={`${inputClass} bg-[#F4F8F1] cursor-not-allowed font-bold text-[#07552F]`}
+                />
+                <p className="mt-1 text-[11px] text-[#5b6b60]">
+                  MRP - discount % = selling price
+                </p>
+              </div>
+
               <div>
                 <label className={labelClass}>Available Stock Units *</label>
                 <input
@@ -609,7 +687,7 @@ export default function ProductForm({ product }: Props) {
                     ];
                     set("sizes", next);
                   }}
-                  className="inline-flex items-center gap-1 rounded-lg bg-[#07552F] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#052E1D] transition cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#07552F] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#052E1D] transition cursor-pointer shrink-0"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add Size
                 </button>
@@ -1036,6 +1114,44 @@ export default function ProductForm({ product }: Props) {
               </div>
             </label>
           </div>
+        </div>
+      </div>
+
+      {/* Bottom action bar for convenient submission */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[#E6EFE3] bg-white p-4 sm:p-5 shadow-xs">
+        <button
+          type="button"
+          onClick={() => router.push("/admin/products")}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5b6b60] hover:text-[#07552F] cursor-pointer"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to products
+        </button>
+
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => router.push("/admin/products")}
+            className="rounded-xl border border-[#cfdccf] bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#052E1D] transition hover:bg-[#F5F8F4] cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={saving || success || uploadingImages}
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07552F] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition hover:bg-[#052E1D] disabled:opacity-60 cursor-pointer"
+          >
+            {saving ? (
+              "Saving..."
+            ) : success ? (
+              <>
+                <Check className="h-4 w-4" /> Saved!
+              </>
+            ) : product ? (
+              "Update Product"
+            ) : (
+              "Create Product"
+            )}
+          </button>
         </div>
       </div>
     </form>

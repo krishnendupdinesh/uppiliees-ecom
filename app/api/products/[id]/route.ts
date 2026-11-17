@@ -7,6 +7,7 @@ import {
   fetchProductByIdOrSlugFromDb,
   generateUniqueSlug,
   safeNumber,
+  calculateSellingPrice,
 } from "@/lib/products-db";
 
 export const dynamic = "force-dynamic";
@@ -69,11 +70,33 @@ export async function PUT(
         ? await generateUniqueSlug(String(body.slug).trim(), Number(existing.id))
         : existing.slug;
 
-    const price = body.price !== undefined ? safeNumber(body.price, 0) : existing.price;
-    const mrp =
-      body.mrp !== undefined
-        ? safeNumber(body.mrp, price)
-        : safeNumber(existing.mrp, price);
+    let mrp = existing.mrp !== undefined && Number(existing.mrp) > 0 ? Number(existing.mrp) : Number(existing.price || 0);
+    if (body.mrp !== undefined) {
+      const rawMrp = Number(body.mrp);
+      if (!Number.isFinite(rawMrp) || rawMrp <= 0) {
+        return NextResponse.json(
+          { error: "MRP must be a number greater than 0." },
+          { status: 400 }
+        );
+      }
+      mrp = Math.round(rawMrp * 100) / 100;
+    }
+
+    let discountPercent = existing.discount_percent !== undefined ? Number(existing.discount_percent) : 0;
+    if (body.discount_percent !== undefined) {
+      const rawDiscount = Number(body.discount_percent);
+      if (!Number.isFinite(rawDiscount) || rawDiscount < 0 || rawDiscount > 100) {
+        return NextResponse.json(
+          { error: "Discount percent must be between 0 and 100." },
+          { status: 400 }
+        );
+      }
+      discountPercent = Math.round(rawDiscount * 100) / 100;
+    }
+
+    const sellingPrice = calculateSellingPrice(mrp, discountPercent);
+    const price = sellingPrice;
+
     const stock =
       body.stock !== undefined
         ? Math.max(0, Math.floor(safeNumber(body.stock, 0)))
@@ -195,7 +218,8 @@ export async function PUT(
     await pool.execute(
       `UPDATE products SET
         name = ?, slug = ?, category_id = ?, subcategory = ?, description = ?,
-        price = ?, mrp = ?, stock = ?, in_stock = ?, is_active = ?, display_order = ?, tags = ?,
+        mrp = ?, discount_percent = ?, selling_price = ?, price = ?,
+        stock = ?, in_stock = ?, is_active = ?, display_order = ?, tags = ?,
         image_url = ?, image_public_id = ?, sizes_json = ?,
         benefits = ?, how_to_use = ?, ingredients = ?, return_policy = ?, featured = ?
        WHERE id = ?`,
@@ -205,8 +229,10 @@ export async function PUT(
         categoryId,
         subcategory,
         description,
-        price,
         mrp,
+        discountPercent,
+        sellingPrice,
+        price,
         stock,
         inStock,
         isActive,

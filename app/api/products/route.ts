@@ -7,6 +7,7 @@ import {
   fetchProductByIdOrSlugFromDb,
   generateUniqueSlug,
   safeNumber,
+  calculateSellingPrice,
 } from "@/lib/products-db";
 
 export const dynamic = "force-dynamic";
@@ -63,8 +64,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const price = safeNumber(body.price, 0);
-    const mrp = safeNumber(body.mrp, price) >= price ? safeNumber(body.mrp, price) : price;
+    // Validation: mrp must be a number greater than 0
+    const rawMrp = Number(body.mrp !== undefined ? body.mrp : body.price);
+    if (!Number.isFinite(rawMrp) || rawMrp <= 0) {
+      return NextResponse.json(
+        { error: "MRP must be a number greater than 0." },
+        { status: 400 }
+      );
+    }
+
+    // Validation: discount_percent must be between 0 and 100
+    const rawDiscount = body.discount_percent !== undefined ? Number(body.discount_percent) : 0;
+    if (!Number.isFinite(rawDiscount) || rawDiscount < 0 || rawDiscount > 100) {
+      return NextResponse.json(
+        { error: "Discount percent must be between 0 and 100." },
+        { status: 400 }
+      );
+    }
+
+    const mrp = Math.round(rawMrp * 100) / 100;
+    const discountPercent = Math.round(rawDiscount * 100) / 100;
+    const sellingPrice = calculateSellingPrice(mrp, discountPercent);
+    const price = sellingPrice;
+
     const stock = Math.max(0, Math.floor(safeNumber(body.stock, 25)));
     const inStock =
       body.in_stock !== undefined
@@ -151,18 +173,21 @@ export async function POST(req: NextRequest) {
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO products (
         name, slug, category_id, subcategory, description,
-        price, mrp, stock, in_stock, is_active, display_order, tags,
+        mrp, discount_percent, selling_price, price,
+        stock, in_stock, is_active, display_order, tags,
         image_url, image_public_id, sizes_json,
         benefits, how_to_use, ingredients, return_policy, featured
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         slug,
         categoryId,
         subcategory,
         description,
-        price,
         mrp,
+        discountPercent,
+        sellingPrice,
+        price,
         stock,
         inStock,
         isActive,

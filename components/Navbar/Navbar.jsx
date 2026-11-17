@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   User,
   Heart,
-  ShoppingBag,
+  ShoppingCart,
   Menu,
   X,
   ChevronDown,
@@ -129,7 +129,67 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const currentHoveredItem = NAV_CATEGORIES.find(
+  // Dynamic menu sections from /api/menu (auto-revalidating)
+  const [menuSections, setMenuSections] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    function fetchMenu() {
+      api("/api/menu")
+        .then((data) => {
+          if (isMounted && Array.isArray(data) && data.length > 0) {
+            setMenuSections(data);
+          }
+        })
+        .catch(() => {});
+    }
+
+    fetchMenu();
+    const interval = setInterval(fetchMenu, 60000); // 60-second periodic revalidate
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Compute dynamic navigation items: HOME, ALL PRODUCTS, [dynamic sections from DB], ABOUT US, CONTACT
+  const navItems = useMemo(() => {
+    if (!menuSections || menuSections.length === 0) {
+      return NAV_CATEGORIES.map((c) => ({
+        ...c,
+        rawName: c.name,
+        categories: [],
+      }));
+    }
+
+    const allCats = menuSections.flatMap((s) => s.categories || []);
+
+    const dynamicMiddle = menuSections.map((sec) => ({
+      name: String(sec.name).toUpperCase(),
+      rawName: String(sec.name),
+      href: `/shop?category=${encodeURIComponent(sec.slug)}`,
+      slug: sec.slug,
+      hasMegaMenu: Array.isArray(sec.categories) && sec.categories.length > 0,
+      categories: sec.categories || [],
+    }));
+
+    return [
+      { name: "HOME", rawName: "Home", href: "/", hasMegaMenu: false, categories: [] },
+      {
+        name: "ALL PRODUCTS",
+        rawName: "All Products",
+        href: "/shop",
+        hasMegaMenu: allCats.length > 0,
+        slug: "shop",
+        categories: allCats,
+      },
+      ...dynamicMiddle,
+      { name: "ABOUT US", rawName: "About Us", href: "/about", hasMegaMenu: false, categories: [] },
+      { name: "CONTACT", rawName: "Contact", href: "/contact", hasMegaMenu: false, categories: [] },
+    ];
+  }, [menuSections]);
+
+  const currentHoveredItem = navItems.find(
     (c) => c.name === hoveredCategory
   );
 
@@ -296,15 +356,16 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* Shopping Bag Link */}
+            {/* Shopping Cart Link */}
             <Link
               href="/cart"
-              className="relative flex items-center gap-1.5 sm:gap-2 bg-[#063D27] hover:bg-[#07552F] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all no-underline shadow-sm"
-              title="Shopping Bag"
+              className="relative flex items-center gap-1.5 sm:gap-2 bg-[#063D27] hover:bg-[#07552F] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all no-underline shadow-sm whitespace-nowrap shrink-0"
+              title="Shopping Cart"
             >
-              <ShoppingBag className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#C7E900]" />
-              <span className="text-xs font-bold tracking-wide">
-                <span className="hidden sm:inline">Bag </span>({cartCount})
+              <ShoppingCart className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#C7E900] shrink-0" />
+              <span className="text-xs font-bold tracking-wide whitespace-nowrap inline-flex items-center gap-1">
+                <span>Cart</span>
+                <span>({cartCount})</span>
               </span>
             </Link>
           </div>
@@ -385,7 +446,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center">
             <ul className="flex items-center justify-center gap-3 lg:gap-5 xl:gap-8 m-0 p-0 list-none">
-              {NAV_CATEGORIES.map((cat) => {
+              {navItems.map((cat) => {
                 const isActive = activeCategory === cat.name;
                 const isHovered = hoveredCategory === cat.name;
 
@@ -576,7 +637,7 @@ export default function Navbar() {
                     Kerala Categories
                   </span>
 
-                  {NAV_CATEGORIES.map((cat) => {
+                  {navItems.map((cat) => {
                     const isExpanded = mobileExpandedCat === cat.name;
 
                     if (!cat.hasMegaMenu) {
@@ -629,16 +690,16 @@ export default function Navbar() {
                               onClick={() => setMobileMenuOpen(false)}
                               className="block py-2 px-2 text-xs font-bold text-[#4D9A18] hover:underline"
                             >
-                              View All in {cat.categoryKey} &rarr;
+                              View All in {cat.rawName || cat.name} &rarr;
                             </Link>
-                            {categoryProducts.map((p) => (
+                            {cat.categories.map((subCat) => (
                               <Link
-                                key={p.id}
-                                href={p.href || `/products/${p.slug}`}
+                                key={subCat.id || subCat.slug}
+                                href={`/shop?category=${encodeURIComponent(subCat.slug)}`}
                                 onClick={() => setMobileMenuOpen(false)}
                                 className="block py-1.5 px-2 text-xs sm:text-sm font-semibold text-[#183629] hover:text-[#07552F] hover:bg-[#F4F8F1] rounded-lg no-underline transition-colors"
                               >
-                                {p.name}
+                                {subCat.name}
                               </Link>
                             ))}
                           </div>

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT ci.id AS cart_item_id, ci.product_id, ci.quantity,
-              p.name, p.slug, p.price, p.mrp, p.image_url
+              p.name, p.slug, p.price, p.mrp, p.selling_price, p.image_url
        FROM cart_items ci
        JOIN products p ON ci.product_id = p.id
        WHERE ci.user_id = ?
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     );
 
     const items = rows.map((r) => {
-      const price = safeNumber(r.price, 0);
+      const price = safeNumber(r.selling_price ?? r.price, 0);
       const mrp = safeNumber(r.mrp, price);
       return {
         id: r.product_id,

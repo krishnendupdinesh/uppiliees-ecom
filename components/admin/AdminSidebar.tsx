@@ -18,11 +18,13 @@ import {
   MessageSquare,
   Tag,
   Mail,
+  FolderTree,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/users", label: "Users", icon: Users },

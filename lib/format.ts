@@ -1,18 +1,27 @@
 import type { Product } from "@/data/products";
 
-export const formatPrice = (n: number | undefined | null) => {
-  const safe = Number(n ?? 0);
-  const valid = Number.isFinite(safe) ? safe : 0;
-  return "₹" + valid.toLocaleString("en-IN");
-};
+// Safe INR currency formatter: treats undefined, null, or NaN as 0
+export function inr(val: unknown): string {
+  if (val === undefined || val === null) return "₹0";
+  const num = Number(val);
+  const safe = Number.isFinite(num) ? num : 0;
+  return "₹" + safe.toLocaleString("en-IN");
+}
 
-export const getDiscount = (p?: Partial<Product> | null) => {
-  const price = Number(p?.price ?? 0);
-  const mrp = Number(p?.mrp ?? price);
-  if (!Number.isFinite(price) || !Number.isFinite(mrp) || mrp <= 0 || mrp <= price) {
+export const formatPrice = (n: unknown): string => inr(n);
+
+// Returns discount percentage (from discount_percent or calculated from mrp & selling_price)
+export const getDiscount = (p?: (Partial<Product> & { discount_percent?: number; selling_price?: number }) | null) => {
+  if (p?.discount_percent !== undefined && p.discount_percent !== null) {
+    const d = Number(p.discount_percent);
+    if (Number.isFinite(d) && d > 0) return Math.round(d);
+  }
+  const selling = Number(p?.selling_price ?? p?.price ?? 0);
+  const mrp = Number(p?.mrp ?? selling);
+  if (!Number.isFinite(selling) || !Number.isFinite(mrp) || mrp <= 0 || mrp <= selling) {
     return 0;
   }
-  return Math.round(((mrp - price) / mrp) * 100);
+  return Math.round(((mrp - selling) / mrp) * 100);
 };
 
 // Optimize Cloudinary image URLs with f_auto, q_auto, and a sensible width for fast delivery

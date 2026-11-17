@@ -19,8 +19,18 @@ export interface DbProductImage {
 
 // Safely parse a number and default to fallback (0) to prevent undefined/NaN price errors
 export function safeNumber(val: unknown, fallback = 0): number {
+  if (val === undefined || val === null) return fallback;
   const num = Number(val);
   return Number.isFinite(num) ? num : fallback;
+}
+
+// Calculates selling_price = mrp - (mrp * discount_percent / 100), rounded to 2 decimals
+export function calculateSellingPrice(mrp: number, discountPercent: number): number {
+  const m = safeNumber(mrp, 0);
+  const d = safeNumber(discountPercent, 0);
+  if (m <= 0) return 0;
+  const price = m - (m * d / 100);
+  return Math.max(0, Math.round(price * 100) / 100);
 }
 
 // Convert a product title into a clean URL-safe slug
@@ -65,8 +75,13 @@ function cleanImageUrl(rawUrl: unknown): string {
 
 // Format a database product row and its product_images rows into a unified object
 export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[] = []) {
-  const price = safeNumber(row.price, 0);
-  const mrp = safeNumber(row.mrp, price) >= price ? safeNumber(row.mrp, price) : price;
+  const mrp = safeNumber(row.mrp !== undefined && row.mrp !== null ? row.mrp : row.price, 0);
+  const discountPercent = safeNumber(row.discount_percent, 0);
+  const calculatedSelling = calculateSellingPrice(mrp, discountPercent);
+  const sellingPrice = row.selling_price !== undefined && row.selling_price !== null && Number(row.selling_price) >= 0
+    ? safeNumber(row.selling_price, calculatedSelling)
+    : calculatedSelling;
+  const price = safeNumber(sellingPrice, safeNumber(row.price, 0));
   const stock = safeNumber(row.stock, 0);
   const inStockFlag = row.in_stock !== undefined ? Boolean(row.in_stock) : true;
   const inStock = inStockFlag && stock > 0;
@@ -98,17 +113,26 @@ export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[]
   const primaryImage = images[0] || "";
   const primaryPublicId = imagePublicIds[0] || "";
 
-  let sizes: { size: string; price: number; mrp?: number; stock?: number }[] = [];
+  let sizes: { size: string; price: number; selling_price?: number; mrp?: number; discount_percent?: number; stock?: number }[] = [];
   if (row.sizes_json) {
     try {
       const parsed = JSON.parse(row.sizes_json);
       if (Array.isArray(parsed)) {
-        sizes = parsed.map((s: any) => ({
-          size: String(s.size || ""),
-          price: safeNumber(s.price, price),
-          mrp: safeNumber(s.mrp, safeNumber(s.price, price)),
-          stock: safeNumber(s.stock, stock),
-        }));
+        sizes = parsed.map((s: any) => {
+          const sMrp = safeNumber(s.mrp, safeNumber(s.price, mrp));
+          const sDiscount = safeNumber(s.discount_percent !== undefined ? s.discount_percent : discountPercent, 0);
+          const sSelling = s.selling_price !== undefined
+            ? safeNumber(s.selling_price, calculateSellingPrice(sMrp, sDiscount))
+            : calculateSellingPrice(sMrp, sDiscount);
+          return {
+            size: String(s.size || ""),
+            price: sSelling,
+            selling_price: sSelling,
+            mrp: sMrp,
+            discount_percent: sDiscount,
+            stock: safeNumber(s.stock, stock),
+          };
+        });
       }
     } catch {
       sizes = [];
@@ -131,6 +155,8 @@ export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[]
     description: row.description || "",
     price,
     mrp,
+    discount_percent: discountPercent,
+    selling_price: price,
     stock,
     in_stock: inStock,
     is_active: isActive,
@@ -168,9 +194,16 @@ export async function fetchProductsFromDb(options?: {
   const includeInactive = Boolean(options?.includeInactive);
 
   let sql = `
-    SELECT p.*, c.name AS category_name, c.slug AS category_slug
+    SELECT 
+      p.*, 
+      c.name AS category_name, 
+      c.slug AS category_slug,
+      c.section_id,
+      s.name AS section_name,
+      s.slug AS section_slug
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
+    LEFT JOIN sections s ON c.section_id = s.id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -186,20 +219,20 @@ export async function fetchProductsFromDb(options?: {
     if (
       category === "traditional-foods" ||
       category === "traditional-food" ||
-      category === "kerala-food" ||
-      category === "food"
+      category === "kerala-food-products" ||
+      category === "kerala-food"
     ) {
-      sql += " AND (c.slug IN ('traditional-foods', 'traditional-food') OR LOWER(c.name) LIKE ?)";
-      params.push("%food%");
-    } else if (category === "herbal-beauty" || category === "herbal-beauty-wellness") {
-      sql += " AND (c.slug = 'herbal-beauty' OR LOWER(c.name) LIKE ?)";
-      params.push("%herbal%");
+      sql += " AND (s.slug = 'kerala-food-products' OR c.slug IN ('traditional-foods', 'traditional-food') OR LOWER(c.name) LIKE ? OR LOWER(s.name) LIKE ?)";
+      params.push("%food%", "%food%");
+    } else if (category === "herbal-beauty" || category === "herbal-wellness" || category === "herbal-beauty-wellness") {
+      sql += " AND (s.slug = 'herbal-wellness' OR c.slug = 'herbal-beauty' OR LOWER(c.name) LIKE ? OR LOWER(s.name) LIKE ?)";
+      params.push("%herbal%", "%herbal%");
     } else if (category === "handloom") {
-      sql += " AND (c.slug = 'handloom' OR LOWER(c.name) LIKE ?)";
-      params.push("%handloom%");
+      sql += " AND (s.slug = 'handloom' OR c.slug = 'handloom' OR LOWER(c.name) LIKE ? OR LOWER(s.name) LIKE ?)";
+      params.push("%handloom%", "%handloom%");
     } else {
-      sql += " AND (c.slug = ? OR LOWER(c.name) = ? OR LOWER(p.subcategory) = ?)";
-      params.push(category, category, category);
+      sql += " AND (c.slug = ? OR LOWER(c.name) = ? OR LOWER(p.subcategory) = ? OR s.slug = ? OR LOWER(s.name) = ?)";
+      params.push(category, category, category, category, category);
     }
   }
 
@@ -220,7 +253,32 @@ export async function fetchProductsFromDb(options?: {
     sql += " ORDER BY COALESCE(p.category_id, 99) ASC, COALESCE(p.display_order, 9999) ASC, p.id ASC";
   }
 
-  const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
+  let rows: RowDataPacket[] = [];
+  try {
+    const [res] = await pool.execute<RowDataPacket[]>(sql, params);
+    rows = res;
+  } catch (err: any) {
+    // If sections table or columns do not exist yet (before migration runs), fallback safely
+    if (
+      err &&
+      (err.code === "ER_NO_SUCH_TABLE" ||
+        err.message?.includes("sections") ||
+        err.message?.includes("Unknown column"))
+    ) {
+      console.warn("⚠️ Database table/column not found. Falling back to basic products query:", err.message);
+      const fallbackSql = `
+        SELECT p.*, c.name AS category_name, c.slug AS category_slug
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE 1=1 ${!includeInactive ? "AND (p.is_active = TRUE OR p.is_active IS NULL)" : ""}
+        ORDER BY p.id ASC
+      `;
+      const [fallbackRows] = await pool.execute<RowDataPacket[]>(fallbackSql);
+      rows = fallbackRows;
+    } else {
+      throw err;
+    }
+  }
   if (rows.length === 0) return [];
 
   const productIds = rows.map((r) => r.id);
@@ -313,20 +371,27 @@ export async function fetchCollectionFromDb(
       includeInactive: false,
     });
 
-    const mappedProducts: Product[] = dbRows.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      category: p.subcategory || p.category_name || "General",
-      price: safeNumber(p.price, 0),
-      mrp: safeNumber(p.mrp, safeNumber(p.price, 0)),
-      description: p.description || undefined,
-      collectionSlug: p.category_slug || (slug === "products" ? "herbal-beauty" : slug),
-      image: p.image_url || "",
-      images: p.images || [],
-      stock: p.stock,
-      in_stock: p.in_stock,
-    }));
+    const mappedProducts: Product[] = dbRows.map((p) => {
+      const selling = safeNumber(p.selling_price ?? p.price, 0);
+      const mrp = safeNumber(p.mrp, selling);
+      const discount = safeNumber(p.discount_percent, 0);
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        category: p.subcategory || p.category_name || "General",
+        price: selling,
+        selling_price: selling,
+        mrp,
+        discount_percent: discount,
+        description: p.description || undefined,
+        collectionSlug: p.category_slug || (slug === "products" ? "herbal-beauty" : slug),
+        image: p.image_url || "",
+        images: p.images || [],
+        stock: p.stock,
+        in_stock: p.in_stock,
+      };
+    });
 
     return {
       slug: baseCollection.slug,

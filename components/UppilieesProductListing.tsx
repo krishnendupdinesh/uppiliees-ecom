@@ -123,6 +123,43 @@ function ProductListingContent({ collection }: ProductListingProps) {
   const [sortBy, setSortBy] = useState(SORT_OPTIONS[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cart, setCart] = useState<Record<string | number, number>>({});
+  const [apiCategories, setApiCategories] = useState<
+    { id: number; name: string; slug: string }[]
+  >([]);
+
+  // Fetch dynamic categories for the sidebar filter
+  useEffect(() => {
+    api<{ id: number; name: string; slug: string }[]>("/api/categories")
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setApiCategories(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Sync category filter from URL query param (e.g. ?category=ayurvedic-tea)
+  useEffect(() => {
+    const catQuery = searchParams.get("category");
+    if (catQuery && catQuery !== "all" && catQuery !== "shop" && catQuery !== "products") {
+      const match = apiCategories.find(
+        (c) =>
+          c.slug.toLowerCase() === catQuery.toLowerCase() ||
+          c.name.toLowerCase() === catQuery.toLowerCase()
+      );
+      if (match) {
+        setSelectedCategories([match.name]);
+      } else {
+        // Humanize slug if needed (e.g. "pain-relief" -> "Pain Relief")
+        const foundLocal = products.find(
+          (p) =>
+            p.category.toLowerCase() === catQuery.toLowerCase() ||
+            p.collectionSlug?.toLowerCase() === catQuery.toLowerCase()
+        );
+        setSelectedCategories([foundLocal ? foundLocal.category : catQuery]);
+      }
+    }
+  }, [searchParams, apiCategories, products]);
 
   // Keep local state synced with server-fetched collection products
   useEffect(() => {
@@ -147,17 +184,24 @@ function ProductListingContent({ collection }: ProductListingProps) {
               (p.category_name
                 ? p.category_name.toLowerCase().replace(/\s+/g, "-")
                 : collection.slug);
-            const safePrice = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
+            const safeSelling = Number.isFinite(Number(p.selling_price))
+              ? Number(p.selling_price)
+              : Number.isFinite(Number(p.price))
+              ? Number(p.price)
+              : 0;
             const safeMrp =
-              Number.isFinite(Number(p.mrp)) && Number(p.mrp) > 0 ? Number(p.mrp) : safePrice;
+              Number.isFinite(Number(p.mrp)) && Number(p.mrp) > 0 ? Number(p.mrp) : safeSelling;
+            const discountPercent = Number.isFinite(Number(p.discount_percent)) ? Number(p.discount_percent) : 0;
             return {
               id: p.id,
               name: p.name,
               slug: p.slug,
               category:
                 p.subcategory || p.category || p.category_name || (isAll ? catSlug : title),
-              price: safePrice,
+              price: safeSelling,
+              selling_price: safeSelling,
               mrp: safeMrp,
+              discount_percent: discountPercent,
               description: p.description || undefined,
               collectionSlug: catSlug,
               image: p.image_url || p.image || "",
@@ -193,14 +237,30 @@ function ProductListingContent({ collection }: ProductListingProps) {
     };
   }, []);
 
-  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
+  // Categories for the sidebar filter loaded from /api/categories
+  const categories = useMemo(() => {
+    if (apiCategories.length > 0) {
+      return apiCategories.map((c) => c.name);
+    }
+    return Array.from(new Set(products.map((p) => p.category)));
+  }, [apiCategories, products]);
 
   // Filter, then sort
   const filteredProducts = useMemo(() => {
     const range = selectedPriceRange !== null ? priceRanges[selectedPriceRange] : null;
 
     let list = products.filter((p) => {
-      if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) return false;
+      if (selectedCategories.length > 0) {
+        const matches = selectedCategories.some((sel) => {
+          const s = sel.toLowerCase();
+          return (
+            (p.category && p.category.toLowerCase() === s) ||
+            (p.subcategory && p.subcategory.toLowerCase() === s) ||
+            (p.collectionSlug && p.collectionSlug.toLowerCase() === s)
+          );
+        });
+        if (!matches) return false;
+      }
       if (range && (p.price < range.min || p.price > range.max)) return false;
       return true;
     });
@@ -330,9 +390,9 @@ function ProductListingContent({ collection }: ProductListingProps) {
             onClear={clearFilters}
           />
 
-          {/* Products Grid: Mobile 2 columns, tablet 3 columns, desktop 5 columns */}
+          {/* Products Grid: Mobile 2 columns, tablet 3 columns, laptop 3-4 columns, widescreen 5 columns */}
           <section className="flex-1 min-w-0">
-            <div className="grid gap-2.5 sm:gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            <div className="grid gap-3 sm:gap-4 lg:gap-5 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {paginatedProducts.map((product) => (
                 <ProductCard
                   key={product.id}

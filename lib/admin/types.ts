@@ -1,9 +1,38 @@
 export type ProductSizeVariant = {
   size: string;
   price: number;
+  selling_price?: number;
   mrp?: number;
+  discount_percent?: number;
   stock?: number;
 };
+
+export interface Section {
+  id: number;
+  name: string;
+  slug: string;
+  sort_order: number;
+  categories: {
+    id: number;
+    name: string;
+    slug: string;
+    is_active?: boolean;
+  }[];
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  section_id: number;
+  section_name?: string;
+  section_slug?: string;
+  is_active: boolean;
+  image?: string | null;
+  subtitle?: string | null;
+  created_at?: string;
+  product_count?: number;
+}
 
 export type Product = {
   id: string;
@@ -14,6 +43,8 @@ export type Product = {
   subcategory?: string;
   price: number;
   mrp: number;
+  discount_percent: number;
+  selling_price: number;
   stock: number;
   in_stock: boolean;
   is_active: boolean;

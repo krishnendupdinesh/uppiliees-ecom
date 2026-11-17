@@ -1,27 +1,23 @@
 import { NextResponse, connection } from "next/server";
-import type { RowDataPacket } from "mysql2";
-import pool from "@/lib/db";
+import { getCategories } from "@/lib/admin/db";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_CATEGORIES = [
-  { id: 1, name: "Herbal & Beauty", slug: "herbal-beauty", subtitle: "Pure Nature. Pure Goodness." },
-  { id: 2, name: "Traditional Food", slug: "traditional-foods", subtitle: "Homemade and traditional, straight from Kerala kitchens" },
-  { id: 3, name: "Handloom", slug: "handloom", subtitle: "Authentic Kerala handloom, woven with care" },
-];
-
+// GET /api/categories - Public: returns all active categories
 export async function GET() {
   await connection();
   try {
-    const [rows] = await pool.execute<RowDataPacket[]>(
-      "SELECT id, name, slug, subtitle FROM categories ORDER BY id ASC"
+    const categories = await getCategories();
+    return NextResponse.json(categories, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
+  } catch (error: any) {
+    console.error("GET /api/categories error:", error);
+    return NextResponse.json(
+      { message: error?.message || "Failed to fetch categories." },
+      { status: 500 }
     );
-    if (rows.length > 0) {
-      return NextResponse.json(rows);
-    }
-    return NextResponse.json(DEFAULT_CATEGORIES);
-  } catch (error) {
-    console.error("Get categories error:", error);
-    return NextResponse.json(DEFAULT_CATEGORIES);
   }
 }

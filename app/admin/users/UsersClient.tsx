@@ -18,7 +18,12 @@ import Modal, { ConfirmModal, AlertModal } from "@/components/admin/Modal";
 import type { RegisteredUser } from "@/lib/admin/types";
 import { api } from "@/lib/api";
 
-const inr = (n: number | undefined | null) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const inr = (n: unknown) => {
+  if (n === undefined || n === null) return "₹0";
+  const num = Number(n);
+  const safe = Number.isFinite(num) ? num : 0;
+  return `₹${safe.toLocaleString("en-IN")}`;
+};
 
 interface UserOrderDetail {
   id: string;

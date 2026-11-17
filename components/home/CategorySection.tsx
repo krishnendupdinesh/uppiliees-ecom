@@ -181,6 +181,42 @@ function CategoryCard({ item, delay }: { item: CategoryData; delay: number }) {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function CategorySection() {
+  const [categories, setCategories] = useState<CategoryData[]>(CATEGORIES);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const fallbackImages = [
+            "/images/category-herbal.jpg",
+            "/images/category-food.jpg",
+            "/images/category-handlooms.jpg",
+          ];
+          const mapped: CategoryData[] = data.map((cat, idx) => {
+            const staticMatch = CATEGORIES.find(
+              (c) => c.href.replace("/", "") === cat.slug || c.title.toLowerCase().includes(cat.name.toLowerCase())
+            );
+            return {
+              id: Number(cat.id),
+              title: cat.name,
+              shortTitle: cat.name,
+              description: cat.subtitle || staticMatch?.description || "Authentic handcrafted Kerala products.",
+              image: cat.image || staticMatch?.image || fallbackImages[idx % fallbackImages.length],
+              alt: cat.name,
+              href: `/${cat.slug}`,
+              linkText: "Shop Now",
+              position: "center",
+            };
+          });
+          setCategories(mapped);
+        }
+      })
+      .catch(() => {
+        // Fallback to static CATEGORIES
+      });
+  }, []);
+
   return (
     <section
       aria-labelledby="category-heading"
@@ -199,9 +235,11 @@ export default function CategorySection() {
           </p>
         </div>
 
-        {/* 3 cards in ONE row on every screen size */}
-        <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-4 md:mt-12 md:gap-6 lg:gap-8">
-          {CATEGORIES.map((item, i) => (
+        {/* Categories grid */}
+        <div className={`mt-6 grid gap-2 sm:mt-8 sm:gap-4 md:mt-12 md:gap-6 lg:gap-8 ${
+          categories.length <= 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+        }`}>
+          {categories.map((item, i) => (
             <CategoryCard key={item.id} item={item} delay={i * 100} />
           ))}
         </div>

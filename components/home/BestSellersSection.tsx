@@ -9,6 +9,7 @@ import { addToCart as addCartItem } from "@/lib/cart";
 import { setBuyNowItem } from "@/lib/buyNow";
 import { api } from "@/lib/api";
 import { optimizeCloudinaryUrl } from "@/lib/format";
+import PriceBlock from "@/components/PriceBlock";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the section content
@@ -239,15 +240,14 @@ function ProductCard({
           {product.description}
         </p>
 
-        <div className="mt-auto pt-2.5 sm:pt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-lg sm:text-xl font-bold text-[#173D2A] md:text-[22px]">
-            {formatPrice(product.price)}
-          </span>
-          {hasDiscount && (
-            <span className="text-xs sm:text-[15px] font-normal text-[#68786B] line-through">
-              {formatPrice(product.originalPrice as number)}
-            </span>
-          )}
+        <div className="mt-auto pt-2.5 sm:pt-3">
+          <PriceBlock
+            sellingPrice={(product as any).selling_price ?? product.price}
+            mrp={(product as any).mrp ?? product.originalPrice}
+            discountPercent={(product as any).discount_percent}
+            size="md"
+            showBadge={true}
+          />
         </div>
 
         {/* Buttons: Buy Now (left, solid) & Add to Cart (right, outline) side-by-side */}

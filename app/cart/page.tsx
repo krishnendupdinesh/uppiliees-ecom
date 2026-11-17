@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import PriceBlock from "@/components/PriceBlock";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -249,15 +250,13 @@ function CartRow({
           </button>
         </div>
 
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
-          <span className="text-[15px] font-bold text-[#173D2A] md:text-base">
-            {formatPrice(item.price)}
-          </span>
-          {hasDiscount && (
-            <span className="text-sm text-[#68786B] line-through">
-              {formatPrice(item.originalPrice as number)}
-            </span>
-          )}
+        <div className="mt-1">
+          <PriceBlock
+            sellingPrice={item.price}
+            mrp={item.originalPrice}
+            size="sm"
+            showBadge={true}
+          />
         </div>
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">

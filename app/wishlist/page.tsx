@@ -24,6 +24,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import PriceBlock from "@/components/PriceBlock";
 
 /* ═══════════════════════════════════════════════════════════════
    1. CONFIG – edit ONLY this part to change the page content
@@ -269,13 +270,13 @@ function WishlistCard({
           </p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-lg font-bold text-[#173D2A] md:text-xl">{formatPrice(item.price)}</span>
-          {hasDiscount && (
-            <span className="text-sm text-[#68786B] line-through">
-              {formatPrice(item.originalPrice as number)}
-            </span>
-          )}
+        <div className="mt-3">
+          <PriceBlock
+            sellingPrice={item.price}
+            mrp={item.originalPrice}
+            size="md"
+            showBadge={true}
+          />
         </div>
 
         <button
