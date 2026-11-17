@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
         stock, in_stock, is_active, display_order, tags,
         image_url, image_public_id, sizes_json,
         benefits, how_to_use, ingredients, return_policy, featured
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         slug,
