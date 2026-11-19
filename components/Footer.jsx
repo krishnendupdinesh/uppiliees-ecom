@@ -370,7 +370,7 @@ export default function Footer() {
       <div className="border-t border-[#07552F] bg-[#052E1D] py-4 sm:py-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#8BA894] text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-            <span>&copy; 2026 UPPILIEES.</span>
+            <span>&copy; 2026 Empire Ae IT Services.</span>
             <span>•</span>
             <span className="text-[#E6EFE3]">Pure Nature. Pure Goodness.</span>
             <span className="hidden md:inline">•</span>

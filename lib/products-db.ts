@@ -150,6 +150,9 @@ export function formatProductRow(row: RowDataPacket, imageRows: DbProductImage[]
     category_id: row.category_id,
     category_name: categoryName,
     category_slug: categorySlug,
+    section_id: row.section_id,
+    section_name: row.section_name,
+    section_slug: row.section_slug,
     subcategory,
     category: subcategory,
     description: row.description || "",
@@ -375,21 +378,33 @@ export async function fetchCollectionFromDb(
       const selling = safeNumber(p.selling_price ?? p.price, 0);
       const mrp = safeNumber(p.mrp, selling);
       const discount = safeNumber(p.discount_percent, 0);
+      const sectionSlug = p.section_slug || (
+        slug === "herbal-beauty" ? "herbal-wellness" :
+        slug === "traditional-foods" ? "kerala-food-products" :
+        slug === "handloom" ? "handloom" : ""
+      );
       return {
         id: p.id,
         name: p.name,
         slug: p.slug,
         category: p.subcategory || p.category_name || "General",
+        subcategory: p.subcategory || p.category_name,
+        category_id: p.category_id,
+        category_name: p.category_name,
+        category_slug: p.category_slug,
+        section_id: p.section_id,
+        section_name: p.section_name,
+        section_slug: sectionSlug,
         price: selling,
         selling_price: selling,
         mrp,
         discount_percent: discount,
         description: p.description || undefined,
-        collectionSlug: p.category_slug || (slug === "products" ? "herbal-beauty" : slug),
-        image: p.image_url || "",
-        images: p.images || [],
-        stock: p.stock,
-        in_stock: p.in_stock,
+        collectionSlug: sectionSlug || p.category_slug || (slug === "products" ? "shop" : slug),
+        image: p.image_url || p.image || "",
+        images: Array.isArray(p.images) ? p.images : [],
+        stock: p.stock !== undefined ? p.stock : 25,
+        in_stock: p.in_stock !== undefined ? p.in_stock : true,
       };
     });
 

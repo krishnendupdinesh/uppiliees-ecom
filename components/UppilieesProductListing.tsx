@@ -141,24 +141,48 @@ function ProductListingContent({ collection }: ProductListingProps) {
   // Sync category filter from URL query param (e.g. ?category=ayurvedic-tea)
   useEffect(() => {
     const catQuery = searchParams.get("category");
-    if (catQuery && catQuery !== "all" && catQuery !== "shop" && catQuery !== "products") {
-      const match = apiCategories.find(
-        (c) =>
-          c.slug.toLowerCase() === catQuery.toLowerCase() ||
-          c.name.toLowerCase() === catQuery.toLowerCase()
-      );
-      if (match) {
-        setSelectedCategories([match.name]);
-      } else {
-        // Humanize slug if needed (e.g. "pain-relief" -> "Pain Relief")
-        const foundLocal = products.find(
-          (p) =>
-            p.category.toLowerCase() === catQuery.toLowerCase() ||
-            p.collectionSlug?.toLowerCase() === catQuery.toLowerCase()
-        );
-        setSelectedCategories([foundLocal ? foundLocal.category : catQuery]);
-      }
+    if (!catQuery || catQuery === "all" || catQuery === "shop" || catQuery === "products") {
+      setSelectedCategories([]);
+      return;
     }
+
+    const clean = catQuery.toLowerCase().trim();
+
+    // 1. Check if it matches a section (e.g. herbal-wellness, kerala-food-products, handloom)
+    const matchSection = products.find(
+      (p) =>
+        (p.section_slug && p.section_slug.toLowerCase() === clean) ||
+        (p.section_name && p.section_name.toLowerCase() === clean)
+    );
+    if (matchSection) {
+      setSelectedCategories([matchSection.section_slug || matchSection.section_name || clean]);
+      return;
+    }
+
+    // 2. Check if subcategory matches from API
+    const matchApi = apiCategories.find(
+      (c) =>
+        c.slug.toLowerCase() === clean ||
+        c.name.toLowerCase() === clean
+    );
+    if (matchApi) {
+      setSelectedCategories([matchApi.name]);
+      return;
+    }
+
+    // 3. Check local products
+    const foundLocal = products.find(
+      (p) =>
+        (p.category && p.category.toLowerCase() === clean) ||
+        (p.subcategory && p.subcategory.toLowerCase() === clean) ||
+        (p.category_slug && p.category_slug.toLowerCase() === clean)
+    );
+    if (foundLocal) {
+      setSelectedCategories([foundLocal.category]);
+      return;
+    }
+
+    setSelectedCategories([catQuery]);
   }, [searchParams, apiCategories, products]);
 
   // Keep local state synced with server-fetched collection products
@@ -237,12 +261,28 @@ function ProductListingContent({ collection }: ProductListingProps) {
     };
   }, []);
 
-  // Categories for the sidebar filter loaded from /api/categories
+  // Categories for the sidebar filter:
+  // If the collection is for a specific section (e.g. Handloom, Herbal, Traditional Foods),
+  // show ONLY the subcategories belonging to this collection.
+  // If collection is "all products", show all subcategories.
   const categories = useMemo(() => {
+    const uniqueFromProducts = Array.from(
+      new Set(
+        products
+          .map((p) => p.subcategory || p.category_name || p.category)
+          .filter(Boolean)
+      )
+    );
+
+    if (uniqueFromProducts.length > 0) {
+      return uniqueFromProducts;
+    }
+
     if (apiCategories.length > 0) {
       return apiCategories.map((c) => c.name);
     }
-    return Array.from(new Set(products.map((p) => p.category)));
+
+    return [];
   }, [apiCategories, products]);
 
   // Filter, then sort
@@ -256,6 +296,10 @@ function ProductListingContent({ collection }: ProductListingProps) {
           return (
             (p.category && p.category.toLowerCase() === s) ||
             (p.subcategory && p.subcategory.toLowerCase() === s) ||
+            (p.category_name && p.category_name.toLowerCase() === s) ||
+            (p.category_slug && p.category_slug.toLowerCase() === s) ||
+            (p.section_name && p.section_name.toLowerCase() === s) ||
+            (p.section_slug && p.section_slug.toLowerCase() === s) ||
             (p.collectionSlug && p.collectionSlug.toLowerCase() === s)
           );
         });

@@ -11,6 +11,12 @@ export type Product = {
   slug: string; // image file name AND the last part of the product URL
   category: string; // sub-category shown on the card (e.g. "Hair Care")
   subcategory?: string;
+  category_id?: number | string;
+  category_name?: string;
+  category_slug?: string;
+  section_id?: number | string;
+  section_name?: string;
+  section_slug?: string;
   price: number; // selling price in INR
   mrp: number; // original MRP in INR
   discount_percent?: number; // discount percentage (0 to 100)

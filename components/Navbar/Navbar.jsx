@@ -164,14 +164,26 @@ export default function Navbar() {
 
     const allCats = menuSections.flatMap((s) => s.categories || []);
 
-    const dynamicMiddle = menuSections.map((sec) => ({
-      name: String(sec.name).toUpperCase(),
-      rawName: String(sec.name),
-      href: `/shop?category=${encodeURIComponent(sec.slug)}`,
-      slug: sec.slug,
-      hasMegaMenu: Array.isArray(sec.categories) && sec.categories.length > 0,
-      categories: sec.categories || [],
-    }));
+    const dynamicMiddle = menuSections.map((sec) => {
+      const cleanSlug = String(sec.slug || "").toLowerCase();
+      const dedicatedHref =
+        cleanSlug === "herbal-wellness" || cleanSlug === "herbal-beauty"
+          ? "/herbal-beauty"
+          : cleanSlug === "kerala-food-products" || cleanSlug === "traditional-foods"
+          ? "/traditional-foods"
+          : cleanSlug === "handloom"
+          ? "/handloom"
+          : `/shop?category=${encodeURIComponent(sec.slug)}`;
+
+      return {
+        name: String(sec.name).toUpperCase(),
+        rawName: String(sec.name),
+        href: dedicatedHref,
+        slug: sec.slug,
+        hasMegaMenu: Array.isArray(sec.categories) && sec.categories.length > 0,
+        categories: sec.categories || [],
+      };
+    });
 
     return [
       { name: "HOME", rawName: "Home", href: "/", hasMegaMenu: false, categories: [] },
